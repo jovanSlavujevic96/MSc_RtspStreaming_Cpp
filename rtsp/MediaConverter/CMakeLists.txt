@@ -1,0 +1,31 @@
+project(MediaConverter)
+
+if (MSVC)
+	set(CMAKE_MODULE_PATH "$ENV{OPENCV_DIR};${CMAKE_MODULE_PATH}") #apend opencv cmake module
+	set(CMAKE_MODULE_PATH "$ENV{FFMPEG_DIR};${CMAKE_MODULE_PATH}") #apend ffmpeg cmake module
+endif()
+find_package(OpenCV REQUIRED)
+find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE REQUIRED)
+
+file(GLOB MEDIA_CONVERTER_SRC_FILES 
+	"${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/*.cc"
+)
+
+file(GLOB MEDIA_CONVERTER_HEADER_FILES 
+	"${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+)
+
+add_library("${PROJECT_NAME}" STATIC
+	"${MEDIA_CONVERTER_SRC_FILES}"
+	"${MEDIA_CONVERTER_HEADER_FILES}"
+)
+target_link_libraries("${PROJECT_NAME}" PRIVATE
+	"${OpenCV_LIBS}"
+	"${FFMPEG_LIBRARIES}"
+)
+target_include_directories("${PROJECT_NAME}" PRIVATE
+	"${OpenCV_INCLUDE_DIRS}"
+	"${FFMPEG_INCLUDE_DIRS}"
+)

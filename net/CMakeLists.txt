@@ -1,0 +1,16 @@
+project(net)
+
+file(GLOB NET_SRC_FILES 
+	"${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/*.cc"
+)
+
+file(GLOB NET_HEADER_FILES 
+	"${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+)
+
+add_library(${PROJECT_NAME} OBJECT
+	"${NET_HEADER_FILES}"
+	"${NET_SRC_FILES}"
+)

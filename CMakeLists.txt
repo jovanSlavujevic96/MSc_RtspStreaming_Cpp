@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.10.2)
-project(RtspServer_Cpp)
+cmake_minimum_required(VERSION 3.8)
+project(MSc_RtspStreaming)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE Release)
@@ -17,24 +17,21 @@ if (MSVC)
 	add_definitions(-DBUILD_DLL)
 endif()
 
+if (MSVC)
+	set(CMAKE_MODULE_PATH "$ENV{OPENCV_DIR};${CMAKE_MODULE_PATH}") #apend opencv cmake module
+	set(CMAKE_MODULE_PATH "$ENV{FFMPEG_DIR};${CMAKE_MODULE_PATH}") #apend ffmpeg cmake module
+endif()
+
+find_package(OpenCV REQUIRED)
+find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE REQUIRED)
+
 find_package(Threads REQUIRED)
 
-include_directories(
-	"${CMAKE_CURRENT_SOURCE_DIR}"
-	"${CMAKE_CURRENT_SOURCE_DIR}/net/"
-	"${CMAKE_CURRENT_SOURCE_DIR}/rtsp/"
-	"${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/"
-)
+include_directories("${OpenCV_INCLUDE_DIRS}")
+include_directories("${FFMPEG_INCLUDE_DIRS}")
 
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/net")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/rtsp")
+link_libraries(Threads::Threads)
+link_libraries("${OpenCV_LIBS}")
+link_libraries("${FFMPEG_LIBRARIES}")
 
-add_library(MyRtsp STATIC
-	"${CMAKE_CURRENT_SOURCE_DIR}/dummy.cc"
-)
-target_link_libraries(MyRtsp
-	net
-	rtsp
-)
-
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/apps")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/RtspServer/")

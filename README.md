@@ -1,1 +1,1 @@
-# MSc_RtspServer_Cpp
+# MSc_RtspStreaming

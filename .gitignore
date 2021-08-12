@@ -3,3 +3,5 @@ out/
 .vscode/
 .vs/
 *.cmake/
+x64/
+x86/

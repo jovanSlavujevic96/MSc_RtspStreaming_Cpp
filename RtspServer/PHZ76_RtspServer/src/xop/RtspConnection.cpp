@@ -104,8 +104,8 @@ void RtspConnection::OnClose()
 bool RtspConnection::HandleRtspRequest(net::BufferReader& buffer)
 {
 #if RTSP_DEBUG
-	string str(buffer.Peek(), buffer.ReadableBytes());
-	if (str.find("rtsp") != string::npos || str.find("RTSP") != string::npos)
+	std::string str(buffer.Peek(), buffer.ReadableBytes());
+	if (str.find("rtsp") != std::string::npos || str.find("RTSP") != std::string::npos)
 	{
 		std::cout << str << std::endl;
 	}
@@ -158,9 +158,9 @@ bool RtspConnection::HandleRtspRequest(net::BufferReader& buffer)
 bool RtspConnection::HandleRtspResponse(net::BufferReader& buffer)
 {
 #if RTSP_DEBUG
-	string str(buffer.Peek(), buffer.ReadableBytes());
-	if (str.find("rtsp") != string::npos || str.find("RTSP") != string::npos) {
-		cout << str << endl;
+	std::string str(buffer.Peek(), buffer.ReadableBytes());
+	if (str.find("rtsp") != std::string::npos || str.find("RTSP") != std::string::npos) {
+		std::cout << str << std::endl;
 	}		
 #endif
 
@@ -197,7 +197,7 @@ bool RtspConnection::HandleRtspResponse(net::BufferReader& buffer)
 void RtspConnection::SendRtspMessage(std::shared_ptr<char> buf, uint32_t size)
 {
 #if RTSP_DEBUG
-	cout << buf.get() << endl;
+	std::cout << buf.get() << std::endl;
 #endif
 
 	this->Send(buf, size);

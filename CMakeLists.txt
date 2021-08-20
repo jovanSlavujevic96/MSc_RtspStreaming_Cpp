@@ -17,7 +17,7 @@ if (MSVC)
 	add_definitions(-DBUILD_DLL)
 endif()
 
-if (MSVC)
+if (WIN32)
 	set(CMAKE_MODULE_PATH "$ENV{OPENCV_DIR};${CMAKE_MODULE_PATH}") #apend opencv cmake module
 	set(CMAKE_MODULE_PATH "$ENV{FFMPEG_DIR};${CMAKE_MODULE_PATH}") #apend ffmpeg cmake module
 endif()
@@ -34,5 +34,8 @@ link_libraries(Threads::Threads)
 link_libraries("${OpenCV_LIBS}")
 link_libraries("${FFMPEG_LIBRARIES}")
 
+set(SOCKET_NETWORKING_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/SocketNetworking/socket_net/include")
+
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/RtspServer/")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/SocketNetworking/")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/RtspClient/")

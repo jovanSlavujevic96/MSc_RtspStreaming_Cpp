@@ -1,7 +1,16 @@
+cmake_minimum_required(VERSION 3.8)
+
 if (WIN32)
     project(RtspClient LANGUAGES CXX)
 elseif(UNIX)
     project(RtspClient)
+endif()
+
+if (NOT OpenCV_FOUND)
+    find_package(OpenCV REQUIRED)
+
+    include_directories("${OpenCV_INCLUDE_DIRS}")
+    link_libraries("${OpenCV_LIBS}")
 endif()
 
 set(CMAKE_CONFIGURATION_TYPES "Release;RelWithDebInfo" CACHE STRING "" FORCE)
@@ -25,6 +34,7 @@ file(GLOB_RECURSE SOURCES
     "${FORMS_DIR}/*.qrc"
     "${INCLUDE_DIR}/*.h"
     "${SOURCE_DIR}/*.cpp"
+    "${SOURCE_DIR}/*.cc"
 )
 
 #=================== SETUP EXECTUABLE ====================#
@@ -47,6 +57,8 @@ endif()
 target_include_directories(${PROJECT_NAME} PRIVATE ${FORMS_DIR})
 target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDE_DIR})
 target_include_directories(${PROJECT_NAME} PRIVATE ${SOURCE_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE ${SOCKET_NETWORKING_INCLUDE_DIRS})
 
 #===================== LINKING LIBRARIES =======================#
-target_link_libraries(${PROJECT_NAME} Qt6::Widgets)
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets)
+target_link_libraries(${PROJECT_NAME} PRIVATE socket_net)

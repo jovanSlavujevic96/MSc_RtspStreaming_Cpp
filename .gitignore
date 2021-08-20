@@ -1,7 +1,8 @@
-build/
+*build*/
 out/
 .vscode/
 .vs/
 *.cmake/
 x64/
 x86/
+*.user

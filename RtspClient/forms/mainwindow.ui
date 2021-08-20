@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1110</width>
-    <height>604</height>
+    <width>1115</width>
+    <height>648</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,8 +17,8 @@
    <widget class="QPushButton" name="pushButton_open_webcam">
     <property name="geometry">
      <rect>
-      <x>90</x>
-      <y>60</y>
+      <x>100</x>
+      <y>280</y>
       <width>171</width>
       <height>81</height>
      </rect>
@@ -30,8 +30,8 @@
    <widget class="QPushButton" name="pushButton_close_webcam">
     <property name="geometry">
      <rect>
-      <x>90</x>
-      <y>160</y>
+      <x>100</x>
+      <y>390</y>
       <width>171</width>
       <height>81</height>
      </rect>
@@ -43,8 +43,8 @@
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
-      <x>310</x>
-      <y>60</y>
+      <x>360</x>
+      <y>130</y>
       <width>731</width>
       <height>431</height>
      </rect>
@@ -53,14 +53,45 @@
      <string/>
     </property>
    </widget>
+   <widget class="QLineEdit" name="lineEdit">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>40</y>
+      <width>501</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>rtsp://127.0.0.1:9090/live</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton">
+    <property name="geometry">
+     <rect>
+      <x>540</x>
+      <y>40</y>
+      <width>111</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Connect</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1110</width>
-     <height>18</height>
+     <width>1115</width>
+     <height>26</height>
     </rect>
    </property>
   </widget>

@@ -1,0 +1,3 @@
+[submodule "SocketNetworking"]
+	path = SocketNetworking
+	url = https://github.com/jovanSlavujevic96/SocketNetworking

@@ -35,3 +35,4 @@ link_libraries("${OpenCV_LIBS}")
 link_libraries("${FFMPEG_LIBRARIES}")
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/RtspServer/")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/RtspClient/")

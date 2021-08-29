@@ -27,6 +27,7 @@ find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE REQUIRED)
 
 find_package(Threads REQUIRED)
 
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 include_directories("${OpenCV_INCLUDE_DIRS}")
 include_directories("${FFMPEG_INCLUDE_DIRS}")
 
@@ -34,8 +35,16 @@ link_libraries(Threads::Threads)
 link_libraries("${OpenCV_LIBS}")
 link_libraries("${FFMPEG_LIBRARIES}")
 
-set(SOCKET_NETWORKING_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/SocketNetworking/socket_net/include")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/H264StreamingAPI/")
+
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/H264StreamingAPI/")
+link_libraries(H264StreamingAPI)
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/RtspServer/")
+
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/SocketNetworking/")
+
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/SocketNetworking/socket_net/include")
+link_libraries(socket_net)
+
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/RtspClient/")

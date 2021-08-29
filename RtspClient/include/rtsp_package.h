@@ -4,22 +4,23 @@
 
 #include "ipackage.h"
 
-#define ONE_KB 1024llu
+#define MAX_MESSAGE_LEN 1024u
 
 class RtspPackage : public IPackage
 {
 public:
-    explicit RtspPackage(uint16_t package_max_size=ONE_KB);
-    ~RtspPackage() = default;
+	RtspPackage(uint16_t size = MAX_MESSAGE_LEN);
+	~RtspPackage() = default;
 
-    const char* cData() const override;
-    uint16_t getCurrentSize() const override;
-    uint16_t getMaxSize() const override;
+	const char* cData() const override;
+	char* data() override;
 
+	void setCurrentSize(uint16_t size);
+
+	uint16_t getCurrentSize() const override;
+	uint16_t getMaxSize() const override;
 private:
-    std::unique_ptr<char[]> mData;
-    uint16_t mPkgMaxSize;
-    uint16_t mPkgCurrSize;
-    
-    char* data() override;
+	uint16_t mCurrentSize;
+	uint16_t mCapacity;
+	std::unique_ptr<char[]> mData;
 };

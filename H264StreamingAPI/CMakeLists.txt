@@ -1,4 +1,4 @@
-project(RtspServerUtils)
+project(H264StreamingAPI)
 
 file(GLOB SRV_UTILS_SRC_FILES 
 	"${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"

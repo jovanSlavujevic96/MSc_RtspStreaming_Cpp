@@ -9,7 +9,7 @@
 #include "xop/H264Source.h"
 #include "xop/rtp.h"
 
-#include "RtspServerUtils/AvH264.h"
+#include "H264StreamingAPI/AvH264Encoder.h"
 
 void SendFrameThread(xop::RtspServer* rtsp_server, xop::MediaSessionId session_id, xop::MediaChannelId channel_id, int link);
 
@@ -81,8 +81,9 @@ void SendFrameThread(xop::RtspServer* rtsp_server, xop::MediaSessionId session_i
     }
 
     cv::Mat frame;
-    AvH264 h264;
+    AvH264Encoder h264;
     AvH264EncConfig conf;
+    AVPacket* av_packet;
 
     conf.bit_rate = 1024;
     conf.width = 640; //(int)capture.get(cv::CAP_PROP_FRAME_WIDTH); //1280 
@@ -104,16 +105,16 @@ void SendFrameThread(xop::RtspServer* rtsp_server, xop::MediaSessionId session_i
         capture >> frame;
         if (frame.data)
         {
-            h264.encode(frame, videoFrame);
+            av_packet = h264.encode(frame);
             videoFrame.timestamp = xop::H264Source::GetTimestamp();
-            //memcpy(videoFrame.buffer, pkt->data, videoFrame.size);
+            videoFrame.buffer = av_packet->data;
+            videoFrame.size = av_packet->size;
             rtsp_server->PushFrame(session_id, channel_id, videoFrame);
         }
         else
         {
             break;
         }
-
         cv::waitKey(20);
         //cv::imshow(windows_name, frame);
     };

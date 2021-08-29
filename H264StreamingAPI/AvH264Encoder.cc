@@ -1,35 +1,6 @@
-#include <stdexcept>
+#include "AvH264Encoder.h"
 
-#include "AvH264.h"
-
-extern "C"
-{
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavutil/avutil.h>
-#include <libavdevice/avdevice.h>
-}
-
-class AvH264::avh264_impl
-{
-public:
-    AVCodec* cdc_;
-    AVCodecContext* cdc_ctx_;
-    AVFrame* avf_;
-    AVPacket* avp_;
-    cv::Size size;
-    int32_t frame_size_;
-    int32_t pts_;
-
-    avh264_impl();
-    ~avh264_impl() = default;
-
-    int open(const AvH264EncConfig& h264_config);
-    void close();
-    void encode(cv::Mat& mat);
-};
-
-AvH264::avh264_impl::avh264_impl()
+AvH264Encoder::AvH264Encoder()
 {
     frame_size_ = 0;
     pts_ = 0;
@@ -39,7 +10,12 @@ AvH264::avh264_impl::avh264_impl()
     avp_ = NULL;
 }
 
-int AvH264::avh264_impl::open(const AvH264EncConfig& h264_config)
+AvH264Encoder::~AvH264Encoder()
+{
+    AvH264Encoder::close();
+}
+
+int AvH264Encoder::open(const AvH264EncConfig& h264_config)
 {
     cdc_ = ::avcodec_find_encoder(AV_CODEC_ID_H264);
     if (!cdc_)
@@ -96,29 +72,39 @@ int AvH264::avh264_impl::open(const AvH264EncConfig& h264_config)
     return avcodec_open2(cdc_ctx_, cdc_, &dict);
 }
 
-void AvH264::avh264_impl::close()
+void AvH264Encoder::close()
 {
     if (cdc_ctx_)
+    {
         avcodec_free_context(&cdc_ctx_);
+        cdc_ctx_ = NULL;
+    }
     if (avf_)
+    {
         av_frame_free(&avf_);
+        avf_ = NULL;
+    }
     if (avp_)
+    {
         av_packet_free(&avp_);
+        avp_ = NULL;
+    }
 }
 
-void AvH264::avh264_impl::encode(cv::Mat& mat)
+AVPacket* AvH264Encoder::encode(const cv::Mat& mat) noexcept
 {
     if (mat.empty())
     {
         avp_ = NULL;
-        return;
+        return avp_;
     }
-    cv::resize(mat, mat, size);
-    cv::cvtColor(mat, mat, cv::COLOR_BGR2YUV_I420);
+    static cv::Mat mat_edit;
+    cv::resize(mat, mat_edit, size);
+    cv::cvtColor(mat, mat_edit, cv::COLOR_BGR2YUV_I420);
 
-    avf_->data[0] = mat.data;
-    avf_->data[1] = mat.data + frame_size_;
-    avf_->data[2] = mat.data + frame_size_ * 5 / 4;
+    avf_->data[0] = mat_edit.data;
+    avf_->data[1] = mat_edit.data + frame_size_;
+    avf_->data[2] = mat_edit.data + frame_size_ * 5 / 4;
     avf_->pts = pts_++;
 
     if ((avcodec_send_frame(cdc_ctx_, avf_) >= 0) &&
@@ -126,33 +112,5 @@ void AvH264::avh264_impl::encode(cv::Mat& mat)
     {
         avp_->stream_index = 0;
     }
-}
-
-AvH264::AvH264() :
-    avh264_pimpl{ std::make_unique<avh264_impl>() }
-{
-    
-}
-
-AvH264::~AvH264() = default;
-
-int AvH264::open(const AvH264EncConfig& h264_config)
-{
-    return avh264_pimpl->open(h264_config);
-}
-
-void AvH264::close()
-{
-    avh264_pimpl->close();
-}
-
-void AvH264::encode(cv::Mat& mat, xop::AVFrame& frame) noexcept(false)
-{
-    avh264_pimpl->encode(mat);
-    if (!avh264_pimpl->avp_)
-    {
-        throw std::runtime_error("Encode failed");
-    }
-    frame.size = avh264_pimpl->avp_->size;
-    frame.buffer = avh264_pimpl->avp_->data;
+    return avp_;
 }

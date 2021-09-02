@@ -17,10 +17,12 @@ class MainWindow;
 
 class StreamingWorker : public QThread
 {
-public:
-	~StreamingWorker();
+   Q_OBJECT
 
-	void setMainWindow(MainWindow* window);
+public:
+    StreamingWorker() = default;
+    ~StreamingWorker() = default;
+
 	void setRtpClientIp(const char* ip);
 	void setRtpClientPort(uint16_t port);
 	void setRtpClientCast(bool is_multicast);
@@ -32,19 +34,25 @@ public:
 	void stopRtpClient();
 
 	bool getRunning() const;
-private:
-	friend class MainWindow;
-	StreamingWorker() = default;
+    cv::Size getFrameSize() const;
 
-	void run() override;
+signals:
+    void updateWindow(const cv::Mat& frame);
+    void dropError(const char* title, const char* message);
+    void dropWarning(const char* title, const char* message);
+    void dropInfo(const char* title, const char* message);
+
+private:
 
 	std::string mRtpIp = "";
 	uint16_t mRtpPort = 0;
-	bool mIsMulticast = true;
-	MainWindow* mWindow = NULL;
+    bool mIsMulticast = true;
 	std::unique_ptr<IClient> mRtpClient = nullptr;
 	bool mThreadRunning = false;
 	std::unique_ptr<AvH264Decoder> mDecoder = nullptr;
 	RtpFramePackage mRtpPackage;
 	cv::Mat mCvFrame;
+
+protected:
+    void run() override final;
 };

@@ -27,7 +27,11 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+public slots:
     void updateScreen(const cv::Mat& frame_mat);
+    void displayError(const char* title, const char* message);
+    void displayWarning(const char* title, const char* message);
+    void displayInfo(const char* title, const char* message);
 
 private slots:
     void on_pushButton_open_webcam_clicked();
@@ -39,7 +43,6 @@ private:
     Ui::MainWindow *ui;
 
     QImage qt_image;
-
     StreamingWorker mStreamingWorker;
 
     std::unique_ptr<CTcpClient> rtsp_client;

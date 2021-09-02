@@ -12,16 +12,6 @@
 
 #define MAX_UDP_PAYLOAD_SIZE 0xFFFFu
 
-StreamingWorker::~StreamingWorker()
-{
-
-}
-
-void StreamingWorker::setMainWindow(MainWindow* window)
-{
-	mWindow = window;
-}
-
 void StreamingWorker::setRtpClientIp(const char* ip)
 {
 	mRtpIp = ip;
@@ -41,17 +31,9 @@ void StreamingWorker::start() noexcept(false)
 {
 	if (mThreadRunning)
 	{
-		QMessageBox::critical(mWindow, tr("Info"), tr("RTSP Streaming Client is already running."));
+        emit dropInfo("Information", "RTSP Streaming Client is already running.");
 		return;
 	}
-	else if (!mWindow)
-	{
-		throw std::runtime_error(
-			"mWindow is NULL.\n"
-			"You must setMainWindow."
-		);
-	}
-
 	QThread::setTerminationEnabled(true);
 	QThread::start(Priority::HighestPriority);
 	mThreadRunning = true;
@@ -61,7 +43,7 @@ void StreamingWorker::stop() noexcept(false)
 {
 	if (!mThreadRunning)
 	{
-		QMessageBox::critical(mWindow, tr("Info"), tr("RTSP Streaming Client is already closed."));
+        emit dropInfo("Information", "RTSP Streaming Client is already closed..");
 		return;
 	}
 	mThreadRunning = false;
@@ -117,6 +99,11 @@ bool StreamingWorker::getRunning() const
 	return mThreadRunning;
 }
 
+cv::Size StreamingWorker::getFrameSize() const
+{
+    return mCvFrame.size();
+}
+
 void StreamingWorker::run()
 {
 	IClient& rtp_client = *mRtpClient.get();
@@ -136,10 +123,14 @@ void StreamingWorker::run()
 			rcv_bytes = rtp_client >> &mRtpPackage;
 		}
 		catch (const CSocketException& e)
-		{
-			QMessageBox::critical(mWindow, tr("RTSP Client Failed"), tr(e.what()));
+        {
+            emit dropError("RTSP Client Failed", e.what());
 			break;
 		}
+        if (rcv_bytes <= RTP_HEADER_SIZE)
+        {
+            goto init;
+        }
 		if (!rtp_header->marker)
 		{
 			if (!first_frame)
@@ -176,10 +167,10 @@ void StreamingWorker::run()
 		}
 		else if (mCvFrame.empty())
 		{
-			QMessageBox::critical(mWindow, tr("CV Frame Empty"), tr("CV Frame is empty after decoding"));
+            emit dropError("CV Frame Empty", "CV Frame is empty after decoding");
 			break;
-		}
-		mWindow->updateScreen(mCvFrame);
+        }
+        emit updateWindow(mCvFrame);
 	init:
 		frame_size = 0;
 		display_frame = false;

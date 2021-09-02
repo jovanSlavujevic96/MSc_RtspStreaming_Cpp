@@ -39,12 +39,16 @@ MainWindow::MainWindow(QWidget* parent) :
 
     rtp_mcast_ip = "";
     rtp_mcast_port = 0;
-    
-    mStreamingWorker.setMainWindow(this);
+
+    QObject::connect(&mStreamingWorker, SIGNAL(updateWindow(const cv::Mat&)), this, SLOT(updateScreen(const cv::Mat&)));
+    QObject::connect(&mStreamingWorker, SIGNAL(dropError(const char*, const char*)), this, SLOT(displayError(const char*, const char*)));
+    QObject::connect(&mStreamingWorker, SIGNAL(dropWarning(const char*, const char*)), this, SLOT(displayWarning(const char*, const char*)));
+    QObject::connect(&mStreamingWorker, SIGNAL(dropInfo(const char*, const char*)), this, SLOT(displayInfo(const char*, const char*)));
 }
 
 MainWindow::~MainWindow()
 {
+    MainWindow::on_pushButton_close_webcam_clicked();
     delete ui;
 }
 
@@ -55,15 +59,35 @@ void MainWindow::updateScreen(const cv::Mat& frame_mat)
     ui->label->resize(ui->label->pixmap().size());
 }
 
+void MainWindow::displayError(const char* title, const char* message)
+{
+    QMessageBox::critical(this, tr(title), tr(message));
+}
+
+void MainWindow::displayWarning(const char* title, const char* message)
+{
+    QMessageBox::warning(this, tr(title), tr(message));
+}
+
+void MainWindow::displayInfo(const char* title, const char* message)
+{
+    QMessageBox::information(this, tr(title), tr(message));
+}
+
 void MainWindow::on_pushButton_open_webcam_clicked()
 {
+    if (mStreamingWorker.getRunning())
+    {
+        MainWindow::displayInfo("Information", "Streaming is already running");
+        return;
+    }
     try
     {
         MainWindow::parseRtspUrl();
     }
     catch (const std::runtime_error& e)
     {
-        QMessageBox::critical(this, tr("Parse RTSP URL Failed"), tr(e.what()));
+        MainWindow::displayError("Parse RTSP URL Failed", e.what());
         return;
     }
     try
@@ -72,7 +96,7 @@ void MainWindow::on_pushButton_open_webcam_clicked()
     }
     catch (const std::exception& e)
     {
-        QMessageBox::critical(this, tr("Bad Rtsp Client"), tr(e.what()));
+        MainWindow::displayError("Bad Rtsp Client", e.what());
         return;
     }
     try
@@ -81,14 +105,18 @@ void MainWindow::on_pushButton_open_webcam_clicked()
     }
     catch (const std::runtime_error& e)
     {
-        QMessageBox::critical(this, tr("Connect to RTSP server failed"), tr(e.what()));
+        MainWindow::displayError("Connect to RTSP server failed", e.what());
         return;
     }
 }
 
 void MainWindow::on_pushButton_close_webcam_clicked()
 {
-    cv::Mat image = cv::Mat::zeros(mStreamingWorker.mCvFrame.size(),CV_8UC3);
+    if (!mStreamingWorker.getRunning())
+    {
+        return;
+    }
+    cv::Mat image = cv::Mat::zeros(mStreamingWorker.getFrameSize(),CV_8UC3);
     MainWindow::updateScreen(image);
     try
     {
@@ -96,7 +124,7 @@ void MainWindow::on_pushButton_close_webcam_clicked()
     }
     catch (const std::exception& e)
     {
-        QMessageBox::critical(this, tr("Teardown failed"), tr(e.what()));
+        MainWindow::displayError("Teardown failed", e.what());
     }
     mStreamingWorker.stop();
     if (rtsp_client)

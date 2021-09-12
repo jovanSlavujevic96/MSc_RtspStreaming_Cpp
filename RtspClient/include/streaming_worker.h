@@ -38,9 +38,9 @@ public:
 
 signals:
     void updateWindow(const cv::Mat& frame);
-    void dropError(const char* title, const char* message);
-    void dropWarning(const char* title, const char* message);
-    void dropInfo(const char* title, const char* message);
+    void dropError(std::string title, std::string message);
+    void dropWarning(std::string title, std::string message);
+    void dropInfo(std::string title, std::string message);
 
 private:
 

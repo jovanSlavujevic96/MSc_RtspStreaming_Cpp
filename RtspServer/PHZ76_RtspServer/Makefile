@@ -1,4 +1,4 @@
-﻿DEUBG = -D_DEBUG
+﻿DEBUG = -D_DEBUG
 
 TARGET1 = rtsp_server
 TARGET2 = rtsp_pusher

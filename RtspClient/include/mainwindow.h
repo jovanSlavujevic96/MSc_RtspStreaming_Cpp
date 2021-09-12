@@ -29,13 +29,13 @@ public:
 
 public slots:
     void updateScreen(const cv::Mat& frame_mat);
-    void displayError(const char* title, const char* message);
-    void displayWarning(const char* title, const char* message);
-    void displayInfo(const char* title, const char* message);
+    void displayError(std::string title, std::string message);
+    void displayWarning(std::string title, std::string message);
+    void displayInfo(std::string title, std::string message);
 
 private slots:
-    void on_pushButton_open_webcam_clicked();
-    void on_pushButton_close_webcam_clicked();
+    void on_pushButton_openStream_clicked();
+    void on_pushButton_closeStream_clicked();
     void on_lineEdit_textChanged(const QString& arg1);
     void on_lineEdit_returnPressed();
 
@@ -55,8 +55,11 @@ private:
     std::string rtsp_format;
     RtspPackage rtsp_message;
 
-    std::string rtp_mcast_ip;
-    uint16_t rtp_mcast_port;
+    std::string rtp_ip;
+    uint16_t rtp_port;
+    bool is_multicast;
+
+    bool isMulticast() const;
 
     void parseRtspUrl() noexcept(false);
     void initRtspClient() noexcept(false);

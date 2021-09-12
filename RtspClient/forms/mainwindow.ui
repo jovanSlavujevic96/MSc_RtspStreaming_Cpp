@@ -14,7 +14,7 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QPushButton" name="pushButton_open_webcam">
+   <widget class="QPushButton" name="pushButton_openStream">
     <property name="geometry">
      <rect>
       <x>100</x>
@@ -24,10 +24,10 @@
      </rect>
     </property>
     <property name="text">
-     <string>Open Webcam</string>
+     <string>Open RTSP Stream</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_close_webcam">
+   <widget class="QPushButton" name="pushButton_closeStream">
     <property name="geometry">
      <rect>
       <x>100</x>
@@ -37,7 +37,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Close Webcam</string>
+     <string>Close RTSP Stream</string>
     </property>
    </widget>
    <widget class="QLabel" name="label">

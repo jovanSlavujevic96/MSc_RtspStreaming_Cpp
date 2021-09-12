@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 
 	xop::MediaSession *session = xop::MediaSession::CreateNew("live"); 
 	session->AddSource(xop::channel_0, xop::H264Source::CreateNew()); 
-	//session->StartMulticast(); 
+	//session->StartMulticast();
 	session->AddNotifyConnectedCallback([] (xop::MediaSessionId sessionId, std::string peer_ip, uint16_t peer_port){
 		printf("RTSP client connect, ip=%s, port=%hu \n", peer_ip.c_str(), peer_port);
 	});

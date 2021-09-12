@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 #include <sstream>
+#include <chrono>
+#include <thread>
 
 #include "cudp_client.h"
 #include "cudp_mcast_client.h"
@@ -11,6 +13,9 @@
 #include "streaming_worker.h"
 
 #define MAX_UDP_PAYLOAD_SIZE 0xFFFFu
+#define MAX_RETRIES 50u
+#define BAD_SOCK_ARGUMENT_ERROR_CODE_WIN 10022
+static inline constexpr std::chrono::milliseconds cWaitTime = std::chrono::milliseconds(100);	// 100ms
 
 void StreamingWorker::setRtpClientIp(const char* ip)
 {
@@ -115,15 +120,26 @@ void StreamingWorker::run()
 	bool display_frame = false;
 	bool first_frame = false;
 	uint8_t rtsp_offset;
+    uint8_t retries = MAX_RETRIES;
 
 	while (mThreadRunning)
 	{
 		try
 		{
 			rcv_bytes = rtp_client >> &mRtpPackage;
+			retries = MAX_RETRIES;
 		}
 		catch (const CSocketException& e)
         {
+            if (e.getErrorCode() == BAD_SOCK_ARGUMENT_ERROR_CODE_WIN)
+            {
+				retries--;
+                if (retries > 0)
+                {
+					std::this_thread::sleep_for(cWaitTime);
+                    continue;
+                }
+            }
             emit dropError("RTSP Client Failed", e.what());
 			break;
 		}

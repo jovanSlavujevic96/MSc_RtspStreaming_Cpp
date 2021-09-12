@@ -38,8 +38,11 @@ MainWindow::MainWindow(QWidget* parent) :
     rtsp_cseq_ctr = 0;
     rtsp_format = "";
 
-    rtp_ip = "";
-    rtp_port = 0;
+    rtp_target_ip = "";
+    rtp_target_port = 0;
+    rtp_running_ip = "0.0.0.0";
+    rtp_running_port = 0;
+
     is_multicast = false;
 
     QObject::connect(&mStreamingWorker, SIGNAL(updateWindow(const cv::Mat&)), this, SLOT(updateScreen(const cv::Mat&)));
@@ -141,7 +144,7 @@ bool MainWindow::isMulticast() const
 {
     uint32_t address;
     // store this IP address in sa:
-    ::inet_pton(AF_INET, rtp_ip.c_str(), &address);
+    ::inet_pton(AF_INET, rtp_target_ip.c_str(), &address);
     address = ::htonl(address);
     return ((address >= 0xE8000100) && (address <= 0xE8FFFFFF));
 }
@@ -214,8 +217,10 @@ void MainWindow::connectToRtspServer() noexcept(false)
     MainWindow::rtspDescribe();       //throws errors
     MainWindow::rtspSetup();          //throws errors
     mStreamingWorker.setRtpClientCast(is_multicast);
-    mStreamingWorker.setRtpClientIp(rtp_ip.c_str());
-    mStreamingWorker.setRtpClientPort(rtp_port);
+    mStreamingWorker.setRtpClientIp(rtp_running_ip.c_str());
+    mStreamingWorker.setRtpClientPort(rtp_running_port);
+    mStreamingWorker.setRtpServerIp(rtp_target_ip.c_str());
+    mStreamingWorker.setRtpServerPort(rtp_target_port);
     mStreamingWorker.initRtpClient(); //throws errors
     mStreamingWorker.start();         //throws errors
     MainWindow::rtspPlay();           //throws errors
@@ -297,15 +302,15 @@ void MainWindow::rtspDescribe() noexcept(false)
     }
     if (ret)
     {
-        rtp_port = ret;
+        rtp_target_port = ret;
     }
     else
     {
-        rtp_port = 0;
+        rtp_running_port = 0;
         std::random_device rd;
-        while (!rtp_port)
+        while (!rtp_running_port)
         {
-            rtp_port = rd() % 0xFFFFu;
+            rtp_running_port = rd() % 0xFFFFu;
         }
     }
     rtsp_format = response_word[1]; // RTP/AVP
@@ -317,11 +322,11 @@ void MainWindow::rtspDescribe() noexcept(false)
         {
             throw std::runtime_error("Bad RTSP DESCRIBE response -> Bad format of network line.");
         }
-        rtp_ip = response_word[2];
+        rtp_target_ip = response_word[2];
     }
     else
     {
-        rtp_ip = rtsp_ip;
+        rtp_target_ip = rtsp_ip;
     }
     is_multicast = MainWindow::isMulticast();
 }
@@ -332,10 +337,22 @@ void MainWindow::rtspSetup() noexcept(false)
     std::string sendingMessage;
     {
         std::stringstream ss;
+        const char* casting;
+        uint16_t port;
+        if (is_multicast)
+        {
+            casting = "multicast";
+            port = rtp_target_port;
+        }
+        else
+        {
+            casting = "unicast";
+            port = rtp_running_port;
+        }
         ss << MethodToString[static_cast<size_t>(RtspMethod::SETUP)] << ' ' << rtsp_url << ' ' << RTSP_VERSION << RECURSION_NEWLINE;
         ss << "CSeq: " << ++rtsp_cseq_ctr << RECURSION_NEWLINE;
         ss << "User - Agent: RtspClient / v1.0.0 (by Jovan Slavujevic)" << RECURSION_NEWLINE;
-        ss << "Transport: " << rtsp_format << ';' << ((is_multicast) ? "multicast" : "unicast") << ";port=" << rtp_port << "-0" << DOUBLE_RECURSION_NEWLINE;
+        ss << "Transport: " << rtsp_format << ';' << casting << ";port=" << port << "-0" << DOUBLE_RECURSION_NEWLINE;
         sendingMessage = ss.str();
     }
     clientRtsp << sendingMessage;
@@ -379,32 +396,31 @@ void MainWindow::rtspSetup() noexcept(false)
         {
             throw std::runtime_error("Bad format of destination line of RTSP SETUP response.");
         }
-        if (rtp_ip != response_word[1])
+        if (rtp_target_ip != response_word[1])
         {
-            rtp_ip = response_word[1];
+            rtp_target_ip = response_word[1];
         }
         if (sscanf_s(response_word[5], "%[^=]=%hu-%hu", response_word[0], RESPOND_WORD_MAX_LEN, ret, ret + 1) != 3 || strcmp(response_word[0], "port") || ret[1] != 0)
         {
             throw std::runtime_error("Bad format of port line of RTSP SETUP response.");
         }
+        rtp_target_port = ret[0];
     }
     else if (5 == scanf_ret2)
     {
-        rtp_ip = rtsp_ip;
+        rtp_target_ip = rtsp_ip;
         if (sscanf_s(response_word[3], "%[^=]=%hu-%hu", response_word[0], RESPOND_WORD_MAX_LEN, ret, ret + 1) != 3 || strcmp(response_word[0], "client_port"))
         {
             throw std::runtime_error("Bad format of port line of RTSP SETUP response.");
         }
-//        if (sscanf_s(response_word[4], "%[^=]=%hu-%hu", response_word[0], RESPOND_WORD_MAX_LEN, ret, ret + 1) != 3 || strcmp(response_word[0], "server_port"))
-//        {
-//            throw std::runtime_error("Bad format of port line of RTSP SETUP response.");
-//        }
+        rtp_running_port = ret[0];
+        if (sscanf_s(response_word[4], "%[^=]=%hu-%hu", response_word[0], RESPOND_WORD_MAX_LEN, ret, ret + 1) != 3 || strcmp(response_word[0], "server_port"))
+        {
+            throw std::runtime_error("Bad format of port line of RTSP SETUP response.");
+        }
+        rtp_target_port = ret[0];
     }
     is_multicast = MainWindow::isMulticast();
-    if (rtp_port != ret[0])
-    {
-        rtp_port = ret[0];
-    }
     scanf_ret = sscanf_s(responseLine[2], "%s %hu", response_word[0], RESPOND_WORD_MAX_LEN, ret);
     if (scanf_ret != 2)
     {

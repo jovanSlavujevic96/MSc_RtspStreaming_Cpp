@@ -55,8 +55,10 @@ private:
     std::string rtsp_format;
     RtspPackage rtsp_message;
 
-    std::string rtp_ip;
-    uint16_t rtp_port;
+    std::string rtp_target_ip;
+    uint16_t rtp_target_port;
+    std::string rtp_running_ip;
+    uint16_t rtp_running_port;
     bool is_multicast;
 
     bool isMulticast() const;

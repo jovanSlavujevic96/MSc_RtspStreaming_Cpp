@@ -24,7 +24,9 @@ public:
     ~StreamingWorker() = default;
 
 	void setRtpClientIp(const char* ip);
+	void setRtpServerIp(const char* ip);
 	void setRtpClientPort(uint16_t port);
+	void setRtpServerPort(uint16_t port);
 	void setRtpClientCast(bool is_multicast);
 
 	void start() noexcept(false);
@@ -44,8 +46,10 @@ signals:
 
 private:
 
-	std::string mRtpIp = "";
-	uint16_t mRtpPort = 0;
+	std::string mRtpClientIp = "0.0.0.0"; /*INADDR_ANY*/
+	std::string mRtpServerIp = "";
+	uint16_t mRtpClientPort  = 0;
+	uint16_t mRtpServerPort  = 0;
     bool mIsMulticast = true;
 	std::unique_ptr<IClient> mRtpClient = nullptr;
 	bool mThreadRunning = false;

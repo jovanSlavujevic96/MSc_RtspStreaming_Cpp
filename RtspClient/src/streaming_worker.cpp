@@ -19,12 +19,22 @@ static inline constexpr std::chrono::milliseconds cWaitTime = std::chrono::milli
 
 void StreamingWorker::setRtpClientIp(const char* ip)
 {
-	mRtpIp = ip;
+	mRtpClientIp = ip;
+}
+
+void StreamingWorker::setRtpServerIp(const char* ip)
+{
+	mRtpServerIp = ip;
 }
 
 void StreamingWorker::setRtpClientPort(uint16_t port)
 {
-	mRtpPort = port;
+	mRtpClientPort = port;
+}
+
+void StreamingWorker::setRtpServerPort(uint16_t port)
+{
+	mRtpServerPort = port;
 }
 
 void StreamingWorker::setRtpClientCast(bool is_multicast)
@@ -66,18 +76,22 @@ void StreamingWorker::initRtpClient() noexcept(false)
 		}
 	}
 
-	if (mRtpIp == "" || !mRtpPort)
+	if (mRtpServerIp == "" || !mRtpServerPort)
 	{
-		throw std::runtime_error("Bad RTP ip or port.");
+		throw std::runtime_error("Bad RTP Server ip or port.");
 	}
 
 	if (mIsMulticast)
 	{
-		mRtpClient = std::make_unique<CUdpMcastClient>(mRtpIp.c_str(), mRtpPort);
+		mRtpClient = std::make_unique<CUdpMcastClient>(mRtpServerIp.c_str(), mRtpServerPort);
 	}
 	else
 	{
-		mRtpClient = std::make_unique<CUdpClient>(mRtpIp.c_str(), mRtpPort);
+		if (mRtpClientIp == "" || !mRtpClientPort)
+		{
+			throw std::runtime_error("Bad RTP Client ip or port.");
+		}
+		mRtpClient = std::make_unique<CUdpClient>(mRtpClientIp.c_str(), mRtpClientPort, mRtpServerIp.c_str(), mRtpServerPort);
 	}
 
 	try

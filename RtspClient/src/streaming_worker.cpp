@@ -14,8 +14,6 @@
 
 #define MAX_UDP_PAYLOAD_SIZE 0xFFFFu
 #define MAX_RETRIES 50u
-#define BAD_SOCK_ARGUMENT_ERROR_CODE_WIN 10022
-static inline constexpr std::chrono::milliseconds cWaitTime = std::chrono::milliseconds(100);	// 100ms
 
 void StreamingWorker::setRtpClientIp(const char* ip)
 {
@@ -110,17 +108,13 @@ void StreamingWorker::stopRtpClient()
 	{
 		IClient* tmp = mRtpClient.release();
 		delete tmp;
+		mRtpClient = nullptr;
 	}
 }
 
 bool StreamingWorker::getRunning() const
 {
 	return mThreadRunning;
-}
-
-cv::Size StreamingWorker::getFrameSize() const
-{
-    return mCvFrame.size();
 }
 
 void StreamingWorker::run()
@@ -133,27 +127,17 @@ void StreamingWorker::run()
 	size_t frame_size = 0;
 	bool display_frame = false;
 	bool first_frame = false;
-	uint8_t rtsp_offset;
+    uint8_t rtsp_offset;
     uint8_t retries = MAX_RETRIES;
 
-	while (mThreadRunning)
+    while (mThreadRunning)
 	{
 		try
 		{
 			rcv_bytes = rtp_client >> &mRtpPackage;
-			retries = MAX_RETRIES;
 		}
 		catch (const CSocketException& e)
         {
-            if (e.getErrorCode() == BAD_SOCK_ARGUMENT_ERROR_CODE_WIN)
-            {
-				retries--;
-                if (retries > 0)
-                {
-					std::this_thread::sleep_for(cWaitTime);
-                    continue;
-                }
-            }
             emit dropError("RTSP Client Failed", e.what());
 			break;
 		}
@@ -193,6 +177,13 @@ void StreamingWorker::run()
 		if (decode_ret < 0)
 		{
 			std::cout << "Skipped this frame\n";
+            retries--;
+            if (!retries)
+            {
+                mDecoder->close();
+                mDecoder->init();
+                retries = MAX_RETRIES;
+            }
 			goto init;
 		}
 		else if (mCvFrame.empty())
@@ -201,11 +192,11 @@ void StreamingWorker::run()
 			break;
         }
         emit updateWindow(mCvFrame);
+        retries = MAX_RETRIES;
 	init:
 		frame_size = 0;
 		display_frame = false;
 		first_frame = false;
-		continue;
-	}
-	mThreadRunning = false;
+    }
+    mThreadRunning = false;
 }

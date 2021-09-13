@@ -35,8 +35,7 @@ public:
 	void initRtpClient() noexcept(false);
 	void stopRtpClient();
 
-	bool getRunning() const;
-    cv::Size getFrameSize() const;
+    bool getRunning() const;
 
 signals:
     void updateWindow(const cv::Mat& frame);

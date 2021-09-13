@@ -19,6 +19,8 @@
 #define POSITIVE_RESPONSE_CODE 200u
 #define CONTENT_TYPE "application/sdp"
 #define DEFAULT_RTSP_URL "rtsp://127.0.0.1:9090/live"
+#define FRAME_WIDTH 640u
+#define FRAME_HEIGHT 480u
 
 static inline const size_t cRecNwlLen = std::strlen(RECURSION_NEWLINE);
 
@@ -49,6 +51,8 @@ MainWindow::MainWindow(QWidget* parent) :
     QObject::connect(&mStreamingWorker, SIGNAL(dropError(std::string, std::string)), this, SLOT(displayError(std::string, std::string)));
     QObject::connect(&mStreamingWorker, SIGNAL(dropWarning(std::string, std::string)), this, SLOT(displayWarning(std::string, std::string)));
     QObject::connect(&mStreamingWorker, SIGNAL(dropInfo(std::string, std::string)), this, SLOT(displayInfo(std::string, std::string)));
+
+    MainWindow::on_pushButton_closeStream_clicked();
 }
 
 MainWindow::~MainWindow()
@@ -102,6 +106,7 @@ void MainWindow::on_pushButton_openStream_clicked()
     catch (const std::exception& e)
     {
         MainWindow::displayError("Bad Rtsp Client", e.what());
+        MainWindow::on_pushButton_closeStream_clicked();
         return;
     }
     try
@@ -111,7 +116,7 @@ void MainWindow::on_pushButton_openStream_clicked()
     catch (const std::runtime_error& e)
     {
         MainWindow::displayError("Connect to RTSP server failed", e.what());
-        return;
+        MainWindow::on_pushButton_closeStream_clicked();
     }
 }
 
@@ -119,10 +124,8 @@ void MainWindow::on_pushButton_closeStream_clicked()
 {
     if (!mStreamingWorker.getRunning())
     {
-        return;
+        goto end_it;
     }
-    cv::Mat image = cv::Mat::zeros(mStreamingWorker.getFrameSize(),CV_8UC3);
-    MainWindow::updateScreen(image);
     try
     {
         MainWindow::rtspTeardown();
@@ -132,12 +135,16 @@ void MainWindow::on_pushButton_closeStream_clicked()
         MainWindow::displayError("Teardown failed", e.what());
     }
     mStreamingWorker.stop();
+    mStreamingWorker.stopRtpClient();
+end_it:
     if (rtsp_client)
     {
         IClient* tmp = rtsp_client.release();
         delete tmp;
+        rtsp_client = nullptr;
     }
-    mStreamingWorker.stopRtpClient();
+    cv::Mat image = cv::Mat::zeros(FRAME_HEIGHT, FRAME_WIDTH, CV_8UC3);
+    MainWindow::updateScreen(image);
 }
 
 bool MainWindow::isMulticast() const
@@ -206,8 +213,8 @@ void MainWindow::initRtspClient() noexcept(false)
             throw std::runtime_error(ss.str());
         }
         rtsp_client = std::make_unique<CTcpClient>(rtsp_ip.c_str(), rtsp_port);
-        rtsp_client->initClient();
     }
+    rtsp_client->initClient();
 }
 
 void MainWindow::connectToRtspServer() noexcept(false)
@@ -286,7 +293,7 @@ void MainWindow::rtspDescribe() noexcept(false)
         throw std::runtime_error("Bad format of 4th line (Content-Type) of RTSP DESCRIBE response.");
     }
     const char* SDP = responseLine[3] + ::cRecNwlLen;
-    if (std::strlen(SDP) != (size_t)contentLength)
+    if (std::strlen(SDP) < (size_t)contentLength)
     {
         throw std::runtime_error("Bad SDP format of RTSP DESCRIBE response.");
     }
@@ -454,6 +461,10 @@ void MainWindow::rtspPlay() noexcept(false)
 
 void MainWindow::rtspTeardown() noexcept(false)
 {
+    if (!rtsp_client)
+    {
+        return;
+    }
     IClient& clientRtsp = *rtsp_client.get();
     std::string sendingMessage;
     {

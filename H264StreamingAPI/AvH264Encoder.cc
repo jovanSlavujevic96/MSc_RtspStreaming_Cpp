@@ -98,7 +98,7 @@ AVPacket* AvH264Encoder::encode(const cv::Mat& mat) noexcept
         avp_ = NULL;
         return avp_;
     }
-    static cv::Mat mat_edit;
+    cv::Mat mat_edit;
     cv::resize(mat, mat_edit, size);
     cv::cvtColor(mat, mat_edit, cv::COLOR_BGR2YUV_I420);
 

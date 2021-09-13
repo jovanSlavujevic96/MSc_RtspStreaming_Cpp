@@ -25,6 +25,7 @@ public:
 	using NotifyConnectedCallback = std::function<void (MediaSessionId sessionId, std::string peer_ip, uint16_t peer_port)> ;
 	using NotifyDisconnectedCallback = std::function<void (MediaSessionId sessionId, std::string peer_ip, uint16_t peer_port)> ;
 
+	static MediaSession* CreateNew(const std::string& url_suffix);
 	static MediaSession* CreateNew(const char* url_suffix="live");
 	virtual ~MediaSession();
 

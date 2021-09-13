@@ -27,6 +27,11 @@ MediaSession::MediaSession(const char* url_suffxx) :
 	}
 }
 
+MediaSession* MediaSession::CreateNew(const std::string& url_suffix)
+{
+	return new MediaSession(url_suffix.c_str());
+}
+
 MediaSession* MediaSession::CreateNew(const char* url_suffix)
 {
 	return new MediaSession(url_suffix);

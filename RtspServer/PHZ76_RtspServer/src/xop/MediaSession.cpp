@@ -65,6 +65,21 @@ void MediaSession::SetRtspUrlSuffix(const std::string& suffix)
 	suffix_ = suffix;
 }
 
+const std::string& MediaSession::GetRtspUrl() const
+{
+	return url_;
+}
+
+void MediaSession::SetRtspUrl(const std::string& suffix)
+{
+	url_ = suffix;
+}
+
+void MediaSession::SetRtspUrl(const char* suffix)
+{
+	url_ = suffix;
+}
+
 bool MediaSession::AddSource(MediaChannelId channel_id, MediaSource* source)
 {
 	source->SetSendFrameCallback(

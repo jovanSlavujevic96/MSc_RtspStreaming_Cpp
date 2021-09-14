@@ -6,3 +6,4 @@ out/
 x64/
 x86/
 *.user
+*.json

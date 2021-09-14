@@ -38,7 +38,7 @@ public:
     bool getRunning() const;
 
 signals:
-    void updateWindow(const cv::Mat& frame);
+    void dropFrame(cv::Mat frame);
     void dropError(std::string title, std::string message);
     void dropWarning(std::string title, std::string message);
     void dropInfo(std::string title, std::string message);

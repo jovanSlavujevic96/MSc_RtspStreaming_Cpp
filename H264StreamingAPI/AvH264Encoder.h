@@ -20,15 +20,17 @@ public:
     ~AvH264Encoder();
 
     int open(const AvH264EncConfig& h264_config);
+    int allocNewAvFrame();
     void close();
-    AVPacket* encode(const cv::Mat& mat) noexcept;
+    const AVPacket* encode(const cv::Mat& mat);
 
 private:
-    AVCodec* cdc_;
-    AVCodecContext* cdc_ctx_;
-    AVFrame* avf_;
-    AVPacket* avp_;
-    cv::Size size;
-    int32_t frame_size_;
-    int32_t pts_;
+    AVCodec* mCdc;
+    AVCodecContext* mCdcCtxt;
+    AVFrame* mAvFrame;
+    AVPacket* mAvPacket;
+    cv::Size mCvSize;
+    cv::Mat mCvFrameEdited;
+    int32_t mFrameSize;
+    int32_t mPts;
 };

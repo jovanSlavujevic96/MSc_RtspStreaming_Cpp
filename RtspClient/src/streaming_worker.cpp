@@ -13,7 +13,7 @@
 #include "streaming_worker.h"
 
 #define MAX_UDP_PAYLOAD_SIZE 0xFFFFu
-#define MAX_RETRIES 50u
+#define MAX_RETRIES 20u
 
 void StreamingWorker::setRtpClientIp(const char* ip)
 {
@@ -191,7 +191,7 @@ void StreamingWorker::run()
             emit dropError("CV Frame Empty", "CV Frame is empty after decoding");
 			break;
         }
-        emit updateWindow(mCvFrame);
+        emit dropFrame(mCvFrame);
         retries = MAX_RETRIES;
 	init:
 		frame_size = 0;

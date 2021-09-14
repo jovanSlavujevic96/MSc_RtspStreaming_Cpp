@@ -47,7 +47,7 @@ MainWindow::MainWindow(QWidget* parent) :
 
     is_multicast = false;
 
-    QObject::connect(&mStreamingWorker, SIGNAL(updateWindow(const cv::Mat&)), this, SLOT(updateScreen(const cv::Mat&)));
+    QObject::connect(&mStreamingWorker, SIGNAL(dropFrame(cv::Mat)), this, SLOT(displayFrame(cv::Mat)));
     QObject::connect(&mStreamingWorker, SIGNAL(dropError(std::string, std::string)), this, SLOT(displayError(std::string, std::string)));
     QObject::connect(&mStreamingWorker, SIGNAL(dropWarning(std::string, std::string)), this, SLOT(displayWarning(std::string, std::string)));
     QObject::connect(&mStreamingWorker, SIGNAL(dropInfo(std::string, std::string)), this, SLOT(displayInfo(std::string, std::string)));
@@ -61,7 +61,7 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::updateScreen(const cv::Mat& frame_mat)
+void MainWindow::displayFrame(cv::Mat frame_mat)
 {
     qt_image = QImage(frame_mat.data, frame_mat.cols, frame_mat.rows, QImage::Format_BGR888);
     ui->label->setPixmap(QPixmap::fromImage(qt_image));
@@ -144,7 +144,7 @@ end_it:
         rtsp_client = nullptr;
     }
     cv::Mat image = cv::Mat::zeros(FRAME_HEIGHT, FRAME_WIDTH, CV_8UC3);
-    MainWindow::updateScreen(image);
+    MainWindow::displayFrame(image);
 }
 
 bool MainWindow::isMulticast() const

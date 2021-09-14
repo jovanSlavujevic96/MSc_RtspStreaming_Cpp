@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.8)
 
+if (WIN32)
+    project(RtspClient LANGUAGES CXX)
+elseif(UNIX)
+    project(RtspClient)
+endif()
+
 if (${CMAKE_SOURCE_DIR} MATCHES ${CMAKE_CURRENT_SOURCE_DIR})
+
+    set(CMAKE_CONFIGURATION_TYPES "Release;RelWithDebInfo" CACHE STRING "" FORCE)
 
     if (WIN32)
             set(CMAKE_MODULE_PATH "$ENV{OPENCV_DIR};${CMAKE_MODULE_PATH}") #apend opencv cmake module
@@ -30,14 +38,6 @@ if (${CMAKE_SOURCE_DIR} MATCHES ${CMAKE_CURRENT_SOURCE_DIR})
     link_libraries(Threads::Threads)
 
 endif (${CMAKE_SOURCE_DIR} MATCHES ${CMAKE_CURRENT_SOURCE_DIR})
-
-if (WIN32)
-    project(RtspClient LANGUAGES CXX)
-elseif(UNIX)
-    project(RtspClient)
-endif()
-
-set(CMAKE_CONFIGURATION_TYPES "Release;RelWithDebInfo" CACHE STRING "" FORCE)
 
 #======================= INCLUSION OF Qt =======================#
 set(CMAKE_INCLUDE_CURRENT_DIR ON)

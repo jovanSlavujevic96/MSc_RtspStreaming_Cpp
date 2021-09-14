@@ -40,6 +40,10 @@ public:
 	const std::string& GetRtspUrlSuffix() const;
 	void SetRtspUrlSuffix(const std::string& suffix);
 
+	const std::string& GetRtspUrl() const;
+	void SetRtspUrl(const std::string& suffix);
+	void SetRtspUrl(const char* suffix);
+
 	std::string GetSdpMessage(std::string ip, std::string session_name ="");
 	MediaSource* GetMediaSource(MediaChannelId channel_id);
 
@@ -61,6 +65,7 @@ private:
 	MediaSession(const char* url_suffxx);
 
 	MediaSessionId session_id_ = 0;
+	std::string url_;
 	std::string suffix_;
 	std::string sdp_;
 

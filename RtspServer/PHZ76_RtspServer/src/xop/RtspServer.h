@@ -24,12 +24,12 @@ public:
 
     bool PushFrame(MediaSessionId sessionId, MediaChannelId channelId, AVFrame& frame);
 
+    MediaSession::Ptr LookMediaSession(const std::string& suffix);
+    MediaSession::Ptr LookMediaSession(MediaSessionId session_id);
 private:
     friend class RtspConnection;
 
 	RtspServer(net::EventLoop* loop);
-    MediaSession::Ptr LookMediaSession(const std::string& suffix);
-    MediaSession::Ptr LookMediaSession(MediaSessionId session_id);
     virtual net::TcpConnection::Ptr OnConnect(SOCKET sockfd);
 
     std::mutex mutex_;

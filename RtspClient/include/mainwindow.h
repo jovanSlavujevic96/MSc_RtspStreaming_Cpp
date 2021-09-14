@@ -28,7 +28,7 @@ public:
     ~MainWindow();
 
 public slots:
-    void updateScreen(const cv::Mat& frame_mat);
+    void displayFrame(cv::Mat frame_mat);
     void displayError(std::string title, std::string message);
     void displayWarning(std::string title, std::string message);
     void displayInfo(std::string title, std::string message);

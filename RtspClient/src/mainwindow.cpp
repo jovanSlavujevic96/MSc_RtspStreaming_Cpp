@@ -3,6 +3,7 @@
 #include <vector>
 #include <random>
 
+#include "NetworkUser.h"
 #include "ctcp_client.h"
 
 #include "mainwindow.h"
@@ -47,43 +48,24 @@ MainWindow::MainWindow(QWidget* parent) :
 
     is_multicast = false;
 
+    rtsp_client = nullptr;
+    network_user = nullptr;
+
     QObject::connect(&mStreamingWorker, SIGNAL(dropFrame(cv::Mat)), this, SLOT(displayFrame(cv::Mat)));
     QObject::connect(&mStreamingWorker, SIGNAL(dropError(std::string, std::string)), this, SLOT(displayError(std::string, std::string)));
     QObject::connect(&mStreamingWorker, SIGNAL(dropWarning(std::string, std::string)), this, SLOT(displayWarning(std::string, std::string)));
     QObject::connect(&mStreamingWorker, SIGNAL(dropInfo(std::string, std::string)), this, SLOT(displayInfo(std::string, std::string)));
 
-    MainWindow::on_pushButton_closeStream_clicked();
+    MainWindow::stopRtspStream();
 }
 
 MainWindow::~MainWindow()
 {
-    MainWindow::on_pushButton_closeStream_clicked();
+    MainWindow::stopRtspStream();
     delete ui;
 }
 
-void MainWindow::displayFrame(cv::Mat frame_mat)
-{
-    qt_image = QImage(frame_mat.data, frame_mat.cols, frame_mat.rows, QImage::Format_BGR888);
-    ui->label->setPixmap(QPixmap::fromImage(qt_image));
-    ui->label->resize(ui->label->pixmap().size());
-}
-
-void MainWindow::displayError(std::string title, std::string message)
-{
-    QMessageBox::critical(this, tr(title.c_str()), tr(message.c_str()));
-}
-
-void MainWindow::displayWarning(std::string title, std::string message)
-{
-    QMessageBox::warning(this, tr(title.c_str()), tr(message.c_str()));
-}
-
-void MainWindow::displayInfo(std::string title, std::string message)
-{
-    QMessageBox::information(this, tr(title.c_str()), tr(message.c_str()));
-}
-
-void MainWindow::on_pushButton_openStream_clicked()
+void MainWindow::startRtspStream()
 {
     if (mStreamingWorker.getRunning())
     {
@@ -118,9 +100,10 @@ void MainWindow::on_pushButton_openStream_clicked()
         MainWindow::displayError("Connect to RTSP server failed", e.what());
         MainWindow::on_pushButton_closeStream_clicked();
     }
+    ui->runningStream_lineEdit->setText(rtsp_url.c_str());
 }
 
-void MainWindow::on_pushButton_closeStream_clicked()
+void MainWindow::stopRtspStream()
 {
     if (!mStreamingWorker.getRunning())
     {
@@ -139,12 +122,44 @@ void MainWindow::on_pushButton_closeStream_clicked()
 end_it:
     if (rtsp_client)
     {
-        IClient* tmp = rtsp_client.release();
-        delete tmp;
+        delete rtsp_client.release();
         rtsp_client = nullptr;
     }
     cv::Mat image = cv::Mat::zeros(FRAME_HEIGHT, FRAME_WIDTH, CV_8UC3);
     MainWindow::displayFrame(image);
+    ui->runningStream_lineEdit->setText("NONE");
+}
+
+void MainWindow::displayFrame(cv::Mat frame_mat)
+{
+    qt_image = QImage(frame_mat.data, frame_mat.cols, frame_mat.rows, QImage::Format_BGR888);
+    ui->label->setPixmap(QPixmap::fromImage(qt_image));
+    ui->label->resize(ui->label->pixmap().size());
+}
+
+void MainWindow::displayError(std::string title, std::string message)
+{
+    QMessageBox::critical(this, tr(title.c_str()), tr(message.c_str()));
+}
+
+void MainWindow::displayWarning(std::string title, std::string message)
+{
+    QMessageBox::warning(this, tr(title.c_str()), tr(message.c_str()));
+}
+
+void MainWindow::displayInfo(std::string title, std::string message)
+{
+    QMessageBox::information(this, tr(title.c_str()), tr(message.c_str()));
+}
+
+void MainWindow::on_pushButton_openStream_clicked()
+{
+    MainWindow::startRtspStream();
+}
+
+void MainWindow::on_pushButton_closeStream_clicked()
+{
+    MainWindow::stopRtspStream();
 }
 
 bool MainWindow::isMulticast() const
@@ -192,14 +207,39 @@ void MainWindow::parseRtspUrl() noexcept(false)
     rtsp_suffix = suffix;
 }
 
-void MainWindow::on_lineEdit_textChanged(const QString& arg1)
+void MainWindow::on_rtspStreams_listWidget_doubleClicked(const QModelIndex &index)
 {
-    rtsp_url = arg1.toStdString();
+    std::string tmp = index.data(Qt::DisplayRole).toString().toStdString();
+    if (tmp == rtsp_url)
+    {
+        MainWindow::displayInfo("Information", "Streaming is already running");
+        return;
+    }
+    rtsp_url = tmp;
+    MainWindow::stopRtspStream();
+    MainWindow::startRtspStream();
 }
 
-void MainWindow::on_lineEdit_returnPressed()
+void MainWindow::on_connectToManager_button_clicked()
 {
-    MainWindow::on_pushButton_openStream_clicked();
+    if (!network_user)
+    {
+        network_user = std::make_unique<NetworkUser>("127.0.0.1", 9089, 10);
+        try
+        {
+            network_user->initClient();
+        }
+        catch (const CSocketException& e)
+        {
+            delete network_user.release();
+            network_user = nullptr;
+            displayError("Error on Network User connection", e.what());
+        }
+    }
+    else
+    {
+        displayInfo("Connect To Manager", "Already connected to manager");
+    }
 }
 
 void MainWindow::initRtspClient() noexcept(false)
@@ -522,4 +562,39 @@ static bool parseRtspResponseFirstTwoLines(const char* line1, const char* line2,
         return false;
     }
     return true;
+}
+
+void MainWindow::on_get_streams_button_clicked()
+{
+    if (!network_user)
+    {
+        displayWarning("Get Streams","You are not connected to Network Manager.");
+        return;
+    }
+    try
+    {
+        bool ret = network_user->processRequest("SEND_STREAM_LIST", true);
+        if (!ret)
+        {
+            displayError("Error on Network User processing", "Bad request");
+            return;
+        }
+    }
+    catch (const CSocketException& e)
+    {
+        displayError("Error on Network User communication", e.what());
+        delete network_user.release();
+        network_user = nullptr;
+        return;
+    }
+    const std::vector<char[ARRAY_SIZE]>& rtsp_streams = network_user->getListOfStreams();
+    ui->rtspStreams_listWidget->clear();
+    for (const char* stream : rtsp_streams)
+    {
+        if (!std::strstr(stream, "rtsp://"))
+        {
+            break;
+        }
+        ui->rtspStreams_listWidget->addItem(stream);
+    }
 }

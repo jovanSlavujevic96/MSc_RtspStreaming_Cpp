@@ -11,6 +11,7 @@
 #include "xop/rtp.h"
 
 #include "H264StreamingAPI/AvH264Encoder.h"
+#include "NetworkManagerAPI/NetworkManager.h"
 #include "SocketNetworking/socket_net/include/socket_utils.h"
 
 static void SendFrameThread(cv::VideoCapture* video_capture, AvH264Encoder* h264_encoder, xop::RtspServer* rtsp_server, xop::MediaSessionId session_id, xop::MediaChannelId channel_id, int link);
@@ -18,7 +19,7 @@ static void SendFrameThread(cv::VideoCapture* video_capture, AvH264Encoder* h264
 int __cdecl main()
 {
     // RTSP info variables
-    const uint16_t rtsp_port = 9090;
+    const uint16_t rtsp_port = 9090u;
     std::string rtsp_ip;
     std::map<const char*, uint16_t> rtsp_stream_info_map;
 
@@ -34,6 +35,10 @@ int __cdecl main()
     std::vector<xop::MediaSession*> rtsp_session;
     std::vector<std::thread> streaming_thread;
     uint16_t streaming_iterator;
+
+    // Network Manager variables/constants
+    const uint16_t manager_port = 9089u;
+    std::unique_ptr<NetworkManager> manager = nullptr;
 
     // init list of streams
     rtsp_stream_info_map.emplace("live", 0);
@@ -134,6 +139,24 @@ int __cdecl main()
         rtsp_session_id.push_back(server->AddSession(session));
     }
     std::cout << "Successfully created RTSP stream(s).\n";
+
+    // init network manager
+    manager = std::make_unique<NetworkManager>(manager_port, (uint16_t)rtsp_stream_info_map.size());
+    for (xop::MediaSession* session : rtsp_session)
+    {
+        manager->appendStream(session->GetRtspUrl());
+    }
+    try
+    {
+        manager->initServer();
+        manager->start();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Exception on Network Manager init/start => " << e.what() << std::endl;
+        return -1;
+    }
+    std::cout << "Successfully started Network Manager.\n";
 
     // start streaming thread(s)
     for (streaming_iterator = 0; streaming_iterator < rtsp_stream_info_map.size(); ++streaming_iterator)

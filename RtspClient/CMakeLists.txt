@@ -8,6 +8,7 @@ endif()
 
 if (${CMAKE_SOURCE_DIR} MATCHES ${CMAKE_CURRENT_SOURCE_DIR})
 
+    set(CMAKE_CXX_STANDARD 17)
     set(CMAKE_CONFIGURATION_TYPES "Release;RelWithDebInfo" CACHE STRING "" FORCE)
 
     if (WIN32)
@@ -34,6 +35,11 @@ if (${CMAKE_SOURCE_DIR} MATCHES ${CMAKE_CURRENT_SOURCE_DIR})
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../SocketNetworking/socket_net/include")
     link_libraries(socket_net)
 
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../NetworkManagerAPI" "${CMAKE_BINARY_DIR}/NetworkManagerAPI")
+
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../NetworkManagerAPI")
+    link_libraries(NetworkManagerAPI)
+
     find_package(Threads REQUIRED)
     link_libraries(Threads::Threads)
 
@@ -57,6 +63,7 @@ file(GLOB_RECURSE SOURCES
     "${FORMS_DIR}/*.ui"
     "${FORMS_DIR}/*.qrc"
     "${INCLUDE_DIR}/*.h"
+    "${INCLUDE_DIR}/*.hpp"
     "${SOURCE_DIR}/*.cpp"
     "${SOURCE_DIR}/*.cc"
 )

@@ -13,7 +13,7 @@
 #include "streaming_worker.h"
 
 #define MAX_UDP_PAYLOAD_SIZE 0xFFFFu
-#define MAX_RETRIES 20u
+#define MAX_RETRIES 10u
 
 void StreamingWorker::setRtpClientIp(const char* ip)
 {
@@ -175,8 +175,7 @@ void StreamingWorker::run()
 		mCvFrame = cv::Mat();
 		decode_ret = mDecoder->decode(frame_data, (int)frame_size, mCvFrame);
 		if (decode_ret < 0)
-		{
-			std::cout << "Skipped this frame\n";
+        {
             retries--;
             if (!retries)
             {

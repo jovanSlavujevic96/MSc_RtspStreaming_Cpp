@@ -13,6 +13,7 @@
 #include "streaming_worker.h"
 
 class CTcpClient;
+class NetworkUser;
 
 namespace Ui {
 class MainWindow;
@@ -36,16 +37,34 @@ public slots:
 private slots:
     void on_pushButton_openStream_clicked();
     void on_pushButton_closeStream_clicked();
-    void on_lineEdit_textChanged(const QString& arg1);
-    void on_lineEdit_returnPressed();
+    void on_get_streams_button_clicked();
+    void on_rtspStreams_listWidget_doubleClicked(const QModelIndex &index);
+    void on_connectToManager_button_clicked();
 
-private:
+private: //methods
+    void startRtspStream();
+    void stopRtspStream();
+
+    bool isMulticast() const;
+
+    void parseRtspUrl() noexcept(false);
+    void initRtspClient() noexcept(false);
+    void connectToRtspServer() noexcept(false);
+
+    void rtspOptions() noexcept(false);
+    void rtspDescribe() noexcept(false);
+    void rtspSetup() noexcept(false);
+    void rtspPlay() noexcept(false);
+    void rtspTeardown() noexcept(false);
+
+private: //fields
     Ui::MainWindow *ui;
 
     QImage qt_image;
     StreamingWorker mStreamingWorker;
 
     std::unique_ptr<CTcpClient> rtsp_client;
+    std::unique_ptr<NetworkUser> network_user;
     std::string rtsp_url;
     std::string rtsp_ip;
     std::string rtsp_suffix;
@@ -60,18 +79,6 @@ private:
     std::string rtp_running_ip;
     uint16_t rtp_running_port;
     bool is_multicast;
-
-    bool isMulticast() const;
-
-    void parseRtspUrl() noexcept(false);
-    void initRtspClient() noexcept(false);
-    void connectToRtspServer() noexcept(false);
-
-    void rtspOptions() noexcept(false);
-    void rtspDescribe() noexcept(false);
-    void rtspSetup() noexcept(false);
-    void rtspPlay() noexcept(false);
-    void rtspTeardown() noexcept(false);
 };
 
 #endif // MAINWINDOW_H

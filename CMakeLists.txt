@@ -36,14 +36,19 @@ link_libraries(Threads::Threads)
 link_libraries("${OpenCV_LIBS}")
 link_libraries("${FFMPEG_LIBRARIES}")
 
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/H264StreamingAPI/")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/SocketNetworking/")
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/H264StreamingAPI/")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/SocketNetworking/socket_net/include")
+link_libraries(socket_net)
+
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/H264StreamingAPI/")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/NetworkManagerAPI/")
+
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/H264StreamingAPI/")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/NetworkManagerAPI/")
 
 link_libraries(H264StreamingAPI)
-link_libraries(socket_net)
+link_libraries(NetworkManagerAPI)
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/RtspServer/")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/RtspClient/")

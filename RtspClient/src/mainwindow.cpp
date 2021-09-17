@@ -19,7 +19,6 @@
 #define POSITIVE_RESPONSE "OK"
 #define POSITIVE_RESPONSE_CODE 200u
 #define CONTENT_TYPE "application/sdp"
-#define DEFAULT_RTSP_URL "rtsp://127.0.0.1:9090/live"
 #define FRAME_WIDTH 640u
 #define FRAME_HEIGHT 480u
 
@@ -34,22 +33,15 @@ MainWindow::MainWindow(QWidget* parent) :
 {
     ui->setupUi(this);
 
-    rtsp_url = DEFAULT_RTSP_URL;
+    rtsp_url = "";
     rtsp_ip = "";
     rtsp_suffix = "";
     rtsp_port = 0;
     rtsp_cseq_ctr = 0;
     rtsp_format = "";
 
-    rtp_target_ip = "";
-    rtp_target_port = 0;
-    rtp_running_ip = "0.0.0.0";
-    rtp_running_port = 0;
-
-    is_multicast = false;
-
-    rtsp_client = nullptr;
-    network_user = nullptr;
+    rtsp_client = NULL;
+    network_user = NULL;
 
     QObject::connect(&mStreamingWorker, SIGNAL(dropFrame(cv::Mat)), this, SLOT(displayFrame(cv::Mat)));
     QObject::connect(&mStreamingWorker, SIGNAL(dropError(std::string, std::string)), this, SLOT(displayError(std::string, std::string)));
@@ -62,6 +54,14 @@ MainWindow::MainWindow(QWidget* parent) :
 MainWindow::~MainWindow()
 {
     MainWindow::stopRtspStream();
+    if (rtsp_client)
+    {
+        delete rtsp_client;
+    }
+    if (network_user)
+    {
+        delete network_user;
+    }
     delete ui;
 }
 
@@ -118,12 +118,11 @@ void MainWindow::stopRtspStream()
         MainWindow::displayError("Teardown failed", e.what());
     }
     mStreamingWorker.stop();
-    mStreamingWorker.stopRtpClient();
 end_it:
     if (rtsp_client)
     {
-        delete rtsp_client.release();
-        rtsp_client = nullptr;
+        delete rtsp_client;
+        rtsp_client = NULL;
     }
     cv::Mat image = cv::Mat::zeros(FRAME_HEIGHT, FRAME_WIDTH, CV_8UC3);
     MainWindow::displayFrame(image);
@@ -162,11 +161,10 @@ void MainWindow::on_pushButton_closeStream_clicked()
     MainWindow::stopRtspStream();
 }
 
-bool MainWindow::isMulticast() const
+bool MainWindow::isMulticast(const char* ip) const
 {
     uint32_t address;
-    // store this IP address in sa:
-    ::inet_pton(AF_INET, rtp_target_ip.c_str(), &address);
+    ::inet_pton(AF_INET, ip, &address);
     address = ::htonl(address);
     return ((address >= 0xE8000100) && (address <= 0xE8FFFFFF));
 }
@@ -175,18 +173,25 @@ bool MainWindow::isMulticast() const
 void MainWindow::parseRtspUrl() noexcept(false)
 {
     const char* url = rtsp_url.c_str();
-    if (std::strncmp(url, "rtsp://", 7) != 0)
-    {
-        throw std::runtime_error(
-            "Bad format of RTSP URL.\n"\
-            "URL must have rtsp :// at the beginning."
-        );
-    }
-    // parse url
     uint16_t port = 0;
     char ip[RESPOND_WORD_MAX_LEN] = { 0 };
     char suffix[RESPOND_WORD_MAX_LEN] = { 0 };
-    //
+
+    if ("" == rtsp_url)
+    {
+        throw std::runtime_error(
+            "Can't parse RTSP URL.\n"\
+            "There are no any RTSP URL selected.");
+    }
+    else if (std::strncmp(url, "rtsp://", 7) != 0)
+    {
+        throw std::runtime_error(
+            "Bad format of RTSP URL.\n"\
+            "URL must have rtsp:// at the beginning."
+        );
+    }
+
+    // start parsing
     if (sscanf_s(url + 7, "%[^:]:%hu/%s", ip, RESPOND_WORD_MAX_LEN, &port, suffix, RESPOND_WORD_MAX_LEN) == 3)
     {
 
@@ -224,21 +229,57 @@ void MainWindow::on_connectToManager_button_clicked()
 {
     if (!network_user)
     {
-        network_user = std::make_unique<NetworkUser>("127.0.0.1", 9089, 10);
+        network_user = new NetworkUser("127.0.0.1", 9089, 10);
         try
         {
             network_user->initClient();
         }
         catch (const CSocketException& e)
         {
-            delete network_user.release();
-            network_user = nullptr;
+            delete network_user;
+            network_user = NULL;
             displayError("Error on Network User connection", e.what());
         }
+        displayInfo("Connect To Manager", "Successfully connected to manager");
     }
     else
     {
         displayInfo("Connect To Manager", "Already connected to manager");
+    }
+}
+
+void MainWindow::on_get_streams_button_clicked()
+{
+    if (!network_user)
+    {
+        displayWarning("Get Streams", "You are not connected to Network Manager.");
+        return;
+    }
+    try
+    {
+        bool ret = network_user->processRequest("SEND_STREAM_LIST", true);
+        if (!ret)
+        {
+            displayError("Error on Network User processing", "Bad request");
+            return;
+        }
+    }
+    catch (const CSocketException& e)
+    {
+        displayError("Error on Network User communication", e.what());
+        delete network_user;
+        network_user = NULL;
+        return;
+    }
+    const std::vector<char[ARRAY_SIZE]>& rtsp_streams = network_user->getListOfStreams();
+    ui->rtspStreams_listWidget->clear();
+    for (const char* stream : rtsp_streams)
+    {
+        if (!std::strstr(stream, "rtsp://"))
+        {
+            break;
+        }
+        ui->rtspStreams_listWidget->addItem(stream);
     }
 }
 
@@ -252,30 +293,23 @@ void MainWindow::initRtspClient() noexcept(false)
             ss << "RTSP IP = " << rtsp_ip << " && PORT = " << rtsp_port << " && SUFFIX = " << rtsp_suffix;
             throw std::runtime_error(ss.str());
         }
-        rtsp_client = std::make_unique<CTcpClient>(rtsp_ip.c_str(), rtsp_port);
+        rtsp_client = new CTcpClient(rtsp_ip.c_str(), rtsp_port);
     }
     rtsp_client->initClient();
 }
 
 void MainWindow::connectToRtspServer() noexcept(false)
 {
-    mStreamingWorker.setRtpClientCast(true);
     MainWindow::rtspOptions();        //throws errors
     MainWindow::rtspDescribe();       //throws errors
     MainWindow::rtspSetup();          //throws errors
-    mStreamingWorker.setRtpClientCast(is_multicast);
-    mStreamingWorker.setRtpClientIp(rtp_running_ip.c_str());
-    mStreamingWorker.setRtpClientPort(rtp_running_port);
-    mStreamingWorker.setRtpServerIp(rtp_target_ip.c_str());
-    mStreamingWorker.setRtpServerPort(rtp_target_port);
-    mStreamingWorker.initRtpClient(); //throws errors
     mStreamingWorker.start();         //throws errors
     MainWindow::rtspPlay();           //throws errors
 }
 
 void MainWindow::rtspOptions() noexcept(false)
 {
-    CTcpClient& clientRtsp = *rtsp_client.get();
+    CTcpClient& clientRtsp = *rtsp_client;
     std::string sendingMessage;
     {
         std::stringstream ss;
@@ -301,7 +335,7 @@ void MainWindow::rtspOptions() noexcept(false)
 
 void MainWindow::rtspDescribe() noexcept(false)
 {
-    IClient& clientRtsp = *rtsp_client.get();
+    IClient& clientRtsp = *rtsp_client;
     std::string sendingMessage;
     {
         std::stringstream ss;
@@ -349,19 +383,20 @@ void MainWindow::rtspDescribe() noexcept(false)
     }
     if (ret)
     {
-        rtp_target_port = ret;
+        mStreamingWorker.setRtpServerPort(ret);
     }
     else
     {
-        rtp_running_port = 0;
         std::random_device rd;
-        while (!rtp_running_port)
+        while (!ret)
         {
-            rtp_running_port = rd() % 0xFFFFu;
+            ret = rd() % 0xFFFFu;
         }
+        mStreamingWorker.setRtpClientPort(ret);
     }
     rtsp_format = response_word[1]; // RTP/AVP
     const char* networkLine = std::strstr(SDP, "c=IN");
+    const char* ip;
     if (networkLine)
     {
         scanf_ret = sscanf_s(networkLine, "%s %s %[^/]/%hu\r\n", response_word[0], RESPOND_WORD_MAX_LEN, response_word[1], RESPOND_WORD_MAX_LEN, response_word[2], RESPOND_WORD_MAX_LEN, &ret);
@@ -369,32 +404,33 @@ void MainWindow::rtspDescribe() noexcept(false)
         {
             throw std::runtime_error("Bad RTSP DESCRIBE response -> Bad format of network line.");
         }
-        rtp_target_ip = response_word[2];
+        ip = response_word[2];
     }
     else
     {
-        rtp_target_ip = rtsp_ip;
+        ip = rtsp_ip.c_str();
     }
-    is_multicast = MainWindow::isMulticast();
+    mStreamingWorker.setRtpServerIp(ip);
+    mStreamingWorker.IsRtpMulticast(MainWindow::isMulticast(ip));
 }
 
 void MainWindow::rtspSetup() noexcept(false)
 {
-    IClient& clientRtsp = *rtsp_client.get();
+    IClient& clientRtsp = *rtsp_client;
     std::string sendingMessage;
     {
         std::stringstream ss;
         const char* casting;
         uint16_t port;
-        if (is_multicast)
+        if (mStreamingWorker.IsRtpMulticast())
         {
             casting = "multicast";
-            port = rtp_target_port;
+            port = mStreamingWorker.getRtpServerPort();
         }
         else
         {
             casting = "unicast";
-            port = rtp_running_port;
+            port = mStreamingWorker.getRtpClientPort();
         }
         ss << MethodToString[static_cast<size_t>(RtspMethod::SETUP)] << ' ' << rtsp_url << ' ' << RTSP_VERSION << RECURSION_NEWLINE;
         ss << "CSeq: " << ++rtsp_cseq_ctr << RECURSION_NEWLINE;
@@ -433,41 +469,41 @@ void MainWindow::rtspSetup() noexcept(false)
     if ( (scanf_ret != 7 && scanf_ret2 != 5) || strcmp(response_word[0], "Transport:") || (rtsp_format != response_word[1]) )
     {
         std::stringstream ss;
-        ss << "Bad format of 3rd line of RTSP SETUP response.\n\n" << std::string(responseLine[1], std::strstr(responseLine[1], RECURSION_NEWLINE));
+        ss << "Bad format of 3rd line of RTSP SETUP response.\n\n" << std::string( responseLine[1], std::strstr(responseLine[1], RECURSION_NEWLINE) );
         throw std::runtime_error(ss.str());
     }
     if (7 == scanf_ret)
     {
+        // multicast RTP
+        mStreamingWorker.IsRtpMulticast(true);
         scanf_ret = sscanf_s(response_word[3], "%[^=]=%s", response_word[0], RESPOND_WORD_MAX_LEN, response_word[1], RESPOND_WORD_MAX_LEN);
         if (scanf_ret != 2 || std::strcmp(response_word[0], "destination"))
         {
             throw std::runtime_error("Bad format of destination line of RTSP SETUP response.");
         }
-        if (rtp_target_ip != response_word[1])
-        {
-            rtp_target_ip = response_word[1];
-        }
         if (sscanf_s(response_word[5], "%[^=]=%hu-%hu", response_word[0], RESPOND_WORD_MAX_LEN, ret, ret + 1) != 3 || strcmp(response_word[0], "port") || ret[1] != 0)
         {
             throw std::runtime_error("Bad format of port line of RTSP SETUP response.");
         }
-        rtp_target_port = ret[0];
+        mStreamingWorker.setRtpServerIp(response_word[1]);
+        mStreamingWorker.setRtpServerPort(ret[0]);
     }
     else if (5 == scanf_ret2)
     {
-        rtp_target_ip = rtsp_ip;
+        // unicast RTP
+        mStreamingWorker.IsRtpMulticast(false);
+        mStreamingWorker.setRtpServerIp(rtsp_ip.c_str());
         if (sscanf_s(response_word[3], "%[^=]=%hu-%hu", response_word[0], RESPOND_WORD_MAX_LEN, ret, ret + 1) != 3 || strcmp(response_word[0], "client_port"))
         {
             throw std::runtime_error("Bad format of port line of RTSP SETUP response.");
         }
-        rtp_running_port = ret[0];
+        mStreamingWorker.setRtpClientPort(ret[0]);
         if (sscanf_s(response_word[4], "%[^=]=%hu-%hu", response_word[0], RESPOND_WORD_MAX_LEN, ret, ret + 1) != 3 || strcmp(response_word[0], "server_port"))
         {
             throw std::runtime_error("Bad format of port line of RTSP SETUP response.");
         }
-        rtp_target_port = ret[0];
+        mStreamingWorker.setRtpServerPort(ret[0]);
     }
-    is_multicast = MainWindow::isMulticast();
     scanf_ret = sscanf_s(responseLine[2], "%s %hu", response_word[0], RESPOND_WORD_MAX_LEN, ret);
     if (scanf_ret != 2)
     {
@@ -478,7 +514,7 @@ void MainWindow::rtspSetup() noexcept(false)
 
 void MainWindow::rtspPlay() noexcept(false)
 {
-    IClient& clientRtsp = *rtsp_client.get();
+    IClient& clientRtsp = *rtsp_client;
     std::string sendingMessage;
     {
         std::stringstream ss;
@@ -505,7 +541,7 @@ void MainWindow::rtspTeardown() noexcept(false)
     {
         return;
     }
-    IClient& clientRtsp = *rtsp_client.get();
+    IClient& clientRtsp = *rtsp_client;
     std::string sendingMessage;
     {
         std::stringstream ss;
@@ -562,39 +598,4 @@ static bool parseRtspResponseFirstTwoLines(const char* line1, const char* line2,
         return false;
     }
     return true;
-}
-
-void MainWindow::on_get_streams_button_clicked()
-{
-    if (!network_user)
-    {
-        displayWarning("Get Streams","You are not connected to Network Manager.");
-        return;
-    }
-    try
-    {
-        bool ret = network_user->processRequest("SEND_STREAM_LIST", true);
-        if (!ret)
-        {
-            displayError("Error on Network User processing", "Bad request");
-            return;
-        }
-    }
-    catch (const CSocketException& e)
-    {
-        displayError("Error on Network User communication", e.what());
-        delete network_user.release();
-        network_user = nullptr;
-        return;
-    }
-    const std::vector<char[ARRAY_SIZE]>& rtsp_streams = network_user->getListOfStreams();
-    ui->rtspStreams_listWidget->clear();
-    for (const char* stream : rtsp_streams)
-    {
-        if (!std::strstr(stream, "rtsp://"))
-        {
-            break;
-        }
-        ui->rtspStreams_listWidget->addItem(stream);
-    }
 }

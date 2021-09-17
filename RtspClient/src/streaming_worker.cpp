@@ -15,33 +15,40 @@
 #define MAX_UDP_PAYLOAD_SIZE 0xFFFFu
 #define MAX_RETRIES 10u
 
-void StreamingWorker::setRtpClientIp(const char* ip)
+StreamingWorker::StreamingWorker() :
+	mDecoder{std::make_unique<AvH264Decoder>()}
 {
-	mRtpClientIp = ip;
+	mRtpClientIp = "0.0.0.0"; /*INADDR_ANY*/
+	mRtpServerIp = "";
+	mRtpClientPort = 0;
+	mRtpServerPort = 0;
+	mIsMulticast = true;
+	mRtpClient = NULL;
+	mThreadRunning = false;
 }
 
-void StreamingWorker::setRtpServerIp(const char* ip)
+StreamingWorker::~StreamingWorker()
 {
-	mRtpServerIp = ip;
-}
-
-void StreamingWorker::setRtpClientPort(uint16_t port)
-{
-	mRtpClientPort = port;
-}
-
-void StreamingWorker::setRtpServerPort(uint16_t port)
-{
-	mRtpServerPort = port;
-}
-
-void StreamingWorker::setRtpClientCast(bool is_multicast)
-{
-	mIsMulticast = is_multicast;
+	if (mRtpClient)
+	{
+		delete mRtpClient;
+		mRtpClient = NULL;
+	}
 }
 
 void StreamingWorker::start() noexcept(false)
 {
+// init RTP Client
+	try
+	{
+		StreamingWorker::initRtpClient();
+	}
+	catch (...)
+	{
+		throw;
+	}
+
+
 	if (mThreadRunning)
 	{
         emit dropInfo("Information", "RTSP Streaming Client is already running.");
@@ -54,6 +61,7 @@ void StreamingWorker::start() noexcept(false)
 
 void StreamingWorker::stop() noexcept(false)
 {
+// terminate thread running
 	if (!mThreadRunning)
 	{
         emit dropInfo("Information", "RTSP Streaming Client is already closed..");
@@ -61,27 +69,33 @@ void StreamingWorker::stop() noexcept(false)
 	}
 	mThreadRunning = false;
 	QThread::terminate();
+
+// stop RTP client
+	if (mRtpClient)
+	{
+		delete mRtpClient;
+		mRtpClient = NULL;
+	}
+
+// close H264 Decoder
+	mDecoder->close();
 }
 
 void StreamingWorker::initRtpClient() noexcept(false)
 {
-	if (!mDecoder)
+	if (mDecoder->init() != 0)
 	{
-		mDecoder = std::make_unique<AvH264Decoder>();
-		if (mDecoder->init() != 0)
-		{
-			throw std::runtime_error("FFMPEG H264 Decoder init failed.");
-		}
+		throw CSocketException(0, "FFMPEG H264 Decoder init failed.");
 	}
 
 	if (mRtpServerIp == "" || !mRtpServerPort)
 	{
-		throw std::runtime_error("Bad RTP Server ip or port.");
+		throw CSocketException(0, "Bad RTP Server ip or port.");
 	}
 
 	if (mIsMulticast)
 	{
-		mRtpClient = std::make_unique<CUdpMcastClient>(mRtpServerIp.c_str(), mRtpServerPort);
+		mRtpClient = new CUdpMcastClient(mRtpServerIp.c_str(), mRtpServerPort);
 	}
 	else
 	{
@@ -89,7 +103,7 @@ void StreamingWorker::initRtpClient() noexcept(false)
 		{
 			throw std::runtime_error("Bad RTP Client ip or port.");
 		}
-		mRtpClient = std::make_unique<CUdpClient>(mRtpClientIp.c_str(), mRtpClientPort, mRtpServerIp.c_str(), mRtpServerPort);
+		mRtpClient = new CUdpClient(mRtpClientIp.c_str(), mRtpClientPort, mRtpServerIp.c_str(), mRtpServerPort);
 	}
 
 	try
@@ -102,24 +116,9 @@ void StreamingWorker::initRtpClient() noexcept(false)
 	}
 }
 
-void StreamingWorker::stopRtpClient()
-{
-	if (mRtpClient)
-	{
-		IClient* tmp = mRtpClient.release();
-		delete tmp;
-		mRtpClient = nullptr;
-	}
-}
-
-bool StreamingWorker::getRunning() const
-{
-	return mThreadRunning;
-}
-
 void StreamingWorker::run()
 {
-	IClient& rtp_client = *mRtpClient.get();
+	IClient& rtp_client = *mRtpClient;
 	int32_t rcv_bytes;
 	int decode_ret;
 	static uint8_t frame_data[MAX_UDP_PAYLOAD_SIZE];

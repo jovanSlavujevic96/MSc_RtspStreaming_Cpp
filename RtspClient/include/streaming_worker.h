@@ -13,29 +13,43 @@
 
 class IClient;
 
-class MainWindow;
-
 class StreamingWorker : public QThread
 {
    Q_OBJECT
 
-public:
-    StreamingWorker() = default;
-    ~StreamingWorker() = default;
+private: //fields
+	std::string mRtpClientIp;
+	std::string mRtpServerIp;
+	uint16_t mRtpClientPort;
+	uint16_t mRtpServerPort;
+	bool mIsMulticast;
+	IClient* mRtpClient;
+	bool mThreadRunning;
+	std::unique_ptr<AvH264Decoder> mDecoder;
+	RtpFramePackage mRtpPackage;
+	cv::Mat mCvFrame;
 
-	void setRtpClientIp(const char* ip);
-	void setRtpServerIp(const char* ip);
-	void setRtpClientPort(uint16_t port);
-	void setRtpServerPort(uint16_t port);
-	void setRtpClientCast(bool is_multicast);
+public:
+    explicit StreamingWorker();
+    ~StreamingWorker();
+
+// setters
+	inline void setRtpClientIp(const char* ip) { mRtpClientIp = ip; }
+	inline void setRtpServerIp(const char* ip) { mRtpServerIp = ip; }
+	inline void setRtpClientPort(uint16_t port) { mRtpClientPort = port; }
+	inline void setRtpServerPort(uint16_t port) { mRtpServerPort = port; }
+	inline void IsRtpMulticast(bool is_multicast) { mIsMulticast = is_multicast; }
+
+// getters
+	inline constexpr const std::string& getRtpClientIp() const { return mRtpClientIp; }
+	inline constexpr const std::string& getRtpServerIp() const { return mRtpServerIp; }
+	inline constexpr uint16_t getRtpClientPort() const { return mRtpClientPort; }
+	inline constexpr uint16_t getRtpServerPort() const { return mRtpServerPort; }
+	inline constexpr bool IsRtpMulticast() const { return mIsMulticast; }
+	inline constexpr bool getRunning() const { return mThreadRunning; }
 
 	void start() noexcept(false);
 	void stop() noexcept(false);
-
-	void initRtpClient() noexcept(false);
-	void stopRtpClient();
-
-    bool getRunning() const;
 
 signals:
     void dropFrame(cv::Mat frame);
@@ -43,19 +57,7 @@ signals:
     void dropWarning(std::string title, std::string message);
     void dropInfo(std::string title, std::string message);
 
-private:
-
-	std::string mRtpClientIp = "0.0.0.0"; /*INADDR_ANY*/
-	std::string mRtpServerIp = "";
-	uint16_t mRtpClientPort  = 0;
-	uint16_t mRtpServerPort  = 0;
-    bool mIsMulticast = true;
-	std::unique_ptr<IClient> mRtpClient = nullptr;
-	bool mThreadRunning = false;
-	std::unique_ptr<AvH264Decoder> mDecoder = nullptr;
-	RtpFramePackage mRtpPackage;
-	cv::Mat mCvFrame;
-
-protected:
+private: //methods
     void run() override final;
+	void initRtpClient() noexcept(false);
 };

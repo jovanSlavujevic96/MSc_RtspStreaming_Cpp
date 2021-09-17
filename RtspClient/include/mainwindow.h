@@ -1,7 +1,6 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <memory>
 #include <string>
 
 #include <QMainWindow>
@@ -45,7 +44,7 @@ private: //methods
     void startRtspStream();
     void stopRtspStream();
 
-    bool isMulticast() const;
+    bool isMulticast(const char* ip) const;
 
     void parseRtspUrl() noexcept(false);
     void initRtspClient() noexcept(false);
@@ -63,8 +62,8 @@ private: //fields
     QImage qt_image;
     StreamingWorker mStreamingWorker;
 
-    std::unique_ptr<CTcpClient> rtsp_client;
-    std::unique_ptr<NetworkUser> network_user;
+    CTcpClient* rtsp_client;
+    NetworkUser* network_user;
     std::string rtsp_url;
     std::string rtsp_ip;
     std::string rtsp_suffix;
@@ -73,12 +72,6 @@ private: //fields
     uint32_t rtsp_session;
     std::string rtsp_format;
     RtspPackage rtsp_message;
-
-    std::string rtp_target_ip;
-    uint16_t rtp_target_port;
-    std::string rtp_running_ip;
-    uint16_t rtp_running_port;
-    bool is_multicast;
 };
 
 #endif // MAINWINDOW_H

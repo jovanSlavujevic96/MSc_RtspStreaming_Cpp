@@ -16,20 +16,22 @@ bool NetworkUser::processRequest(const std::string& req, bool expectList) noexce
 	if (expectList)
 	{
 		uint16_t ret = *this >> &mStreamList;
-		ret /= ARRAY_SIZE;
-		uint16_t i = 0;
-		for (const char* stream : mStreamList.mStreams)
+		for (uint16_t i=0; i<ret/ARRAY_SIZE; ++i)
 		{
 			if (i >= ret)
 			{
 				break;
 			}
-			if (!std::strstr(stream, "rtsp://"))
+			try
+			{
+				mStreamList.getStream(i);
+			}
+			catch (...)
 			{
 				return false;
 			}
-			i++;
 		}
+		mStreamList.mCurrentSize = ret / ARRAY_SIZE;
 	}
 	else
 	{
@@ -42,7 +44,7 @@ bool NetworkUser::processRequest(const std::string& req, bool expectList) noexce
 	return true;
 }
 
-const std::vector<char[ARRAY_SIZE]>& NetworkUser::getListOfStreams() const
+const StreamListPackage& NetworkUser::getPacakge() const
 {
-	return mStreamList.mStreams;
+	return mStreamList;
 }

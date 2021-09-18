@@ -26,5 +26,4 @@ private:
 	void threadEntry() override final;
 
 	StreamListPackage mPackage;
-	std::mutex mMutex;
 };

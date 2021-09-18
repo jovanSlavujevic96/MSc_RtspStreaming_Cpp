@@ -12,7 +12,7 @@ public:
 	inline ~NetworkUser() = default;
 
 	bool processRequest(const std::string& req, bool expectList = false) noexcept(false);
-	const std::vector<char[ARRAY_SIZE]>& getListOfStreams() const;
+	const StreamListPackage& getPacakge() const;
 private:
 	StringPackage mRcvPkg;
 	StreamListPackage mStreamList;

@@ -67,7 +67,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::startRtspStream()
 {
-    if (mStreamingWorker.getRunning())
+    if (mStreamingWorker.isRunning())
     {
         MainWindow::displayInfo("Information", "Streaming is already running");
         return;
@@ -88,7 +88,7 @@ void MainWindow::startRtspStream()
     catch (const std::exception& e)
     {
         MainWindow::displayError("Bad Rtsp Client", e.what());
-        MainWindow::on_pushButton_closeStream_clicked();
+        MainWindow::stopRtspStream();
         return;
     }
     try
@@ -98,14 +98,15 @@ void MainWindow::startRtspStream()
     catch (const std::runtime_error& e)
     {
         MainWindow::displayError("Connect to RTSP server failed", e.what());
-        MainWindow::on_pushButton_closeStream_clicked();
+        MainWindow::stopRtspStream();
+        rtsp_url = "NONE";
     }
     ui->runningStream_lineEdit->setText(rtsp_url.c_str());
 }
 
 void MainWindow::stopRtspStream()
 {
-    if (!mStreamingWorker.getRunning())
+    if (!mStreamingWorker.isRunning())
     {
         goto end_it;
     }
@@ -215,10 +216,14 @@ void MainWindow::parseRtspUrl() noexcept(false)
 void MainWindow::on_rtspStreams_listWidget_doubleClicked(const QModelIndex &index)
 {
     std::string tmp = index.data(Qt::DisplayRole).toString().toStdString();
-    if (tmp == rtsp_url)
+    if (mStreamingWorker.isRunning())
     {
-        MainWindow::displayInfo("Information", "Streaming is already running");
-        return;
+        if (tmp == rtsp_url)
+        {
+            MainWindow::displayInfo("Information", "Streaming is already running");
+            return;
+        }
+        mStreamingWorker.stop();
     }
     rtsp_url = tmp;
     MainWindow::stopRtspStream();
@@ -250,6 +255,8 @@ void MainWindow::on_connectToManager_button_clicked()
 
 void MainWindow::on_get_streams_button_clicked()
 {
+    const StreamListPackage& list_pkg = network_user->getPacakge();
+    const char* stream;
     if (!network_user)
     {
         displayWarning("Get Streams", "You are not connected to Network Manager.");
@@ -271,10 +278,10 @@ void MainWindow::on_get_streams_button_clicked()
         network_user = NULL;
         return;
     }
-    const std::vector<char[ARRAY_SIZE]>& rtsp_streams = network_user->getListOfStreams();
     ui->rtspStreams_listWidget->clear();
-    for (const char* stream : rtsp_streams)
+    for (size_t i=0; i<list_pkg.getCurrentSize()/ARRAY_SIZE; ++i)
     {
+        stream = list_pkg.getStream(i);
         if (!std::strstr(stream, "rtsp://"))
         {
             break;

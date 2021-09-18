@@ -14,18 +14,20 @@ class StreamListPackage : public IPackage
 {
 public:
     const char* cData() const override;
-    uint16_t getCurrentSize() const override;
-    uint16_t getMaxSize() const override;
+    size_t getCurrentSize() const override;
+    size_t getMaxSize() const override;
 
+    const char* getStream(size_t i) const noexcept(false);
     void appendStream(const char* stream) noexcept(false);
-
 private:
     friend class NetworkManager;
     friend class NetworkUser;
-    inline explicit StreamListPackage(uint16_t MaxNumOfStreams) : mStreams{ MaxNumOfStreams } {}
+    StreamListPackage(size_t max_num_of_streams);
+    ~StreamListPackage();
 
-    std::vector<char[ARRAY_SIZE]> mStreams;
-    uint16_t currentSize = 0;
+    size_t mCurrentSize = 0;
+    size_t mMaxSize = 0;
+    char* mStreams = NULL;
 
     char* data() override;
 };

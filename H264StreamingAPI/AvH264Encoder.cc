@@ -4,8 +4,8 @@ AvH264Encoder::AvH264Encoder()
 {
     mFrameSize = 0;
     mPts = 0;
-    mCdc = NULL;
-    mCdcCtxt = NULL;
+    mCodec = NULL;
+    mCodecCtxt = NULL;
     mAvFrame = NULL;
     mAvPacket = NULL;
 }
@@ -17,30 +17,30 @@ AvH264Encoder::~AvH264Encoder()
 
 int AvH264Encoder::open(const AvH264EncConfig& h264_config)
 {
-    mCdc = ::avcodec_find_encoder(AV_CODEC_ID_H264);
-    if (!mCdc)
+    mCodec = ::avcodec_find_encoder(AV_CODEC_ID_H264);
+    if (!mCodec)
     {
         std::cout << "!cdc_\n";
         return -1;
     }
-    mCdcCtxt = avcodec_alloc_context3(mCdc);
-    if (!mCdcCtxt)
+    mCodecCtxt = avcodec_alloc_context3(mCodec);
+    if (!mCodecCtxt)
     {
         std::cout << "!cdc_ctx_\n";
         return -1;
     }
-    mCdcCtxt->bit_rate = h264_config.bit_rate;
-    mCdcCtxt->width = h264_config.width;
-    mCdcCtxt->height = h264_config.height;
-    mCdcCtxt->time_base = { 1, h264_config.frame_rate };
-    mCdcCtxt->framerate = { h264_config.frame_rate, 1 };
-    mCdcCtxt->gop_size = h264_config.gop_size;
-    mCdcCtxt->max_b_frames = h264_config.max_b_frames;
-    mCdcCtxt->pix_fmt = AV_PIX_FMT_YUV420P;
-    mCdcCtxt->codec_id = AV_CODEC_ID_H264;
-    mCdcCtxt->codec_type = AVMEDIA_TYPE_VIDEO;
-    mCdcCtxt->qmin = 10; /*10*/
-    mCdcCtxt->qmax = 20; /*51*/
+    mCodecCtxt->bit_rate = h264_config.bit_rate;
+    mCodecCtxt->width = h264_config.width;
+    mCodecCtxt->height = h264_config.height;
+    mCodecCtxt->time_base = { 1, h264_config.frame_rate };
+    mCodecCtxt->framerate = { h264_config.frame_rate, 1 };
+    mCodecCtxt->gop_size = h264_config.gop_size;
+    mCodecCtxt->max_b_frames = h264_config.max_b_frames;
+    mCodecCtxt->pix_fmt = AV_PIX_FMT_YUV420P;
+    mCodecCtxt->codec_id = AV_CODEC_ID_H264;
+    mCodecCtxt->codec_type = AVMEDIA_TYPE_VIDEO;
+    mCodecCtxt->qmin = 10; /*10*/
+    mCodecCtxt->qmax = 19; /*51*/
     //mCdcCtxt->qcompress = 0.6f;
 
     AVDictionary* dict = 0;
@@ -49,10 +49,10 @@ int AvH264Encoder::open(const AvH264EncConfig& h264_config)
     av_dict_set(&dict, "profile", "main", 0);
     av_dict_set(&dict, "rtsp_transport", "udp", 0);
 
-    mFrameSize = mCdcCtxt->width * mCdcCtxt->height;
+    mFrameSize = mCodecCtxt->width * mCodecCtxt->height;
 
-    mCvSize = cv::Size(mCdcCtxt->width, mCdcCtxt->height);
-    return avcodec_open2(mCdcCtxt, mCdc, &dict);
+    mCvSize = cv::Size(mCodecCtxt->width, mCodecCtxt->height);
+    return avcodec_open2(mCodecCtxt, mCodec, &dict);
 }
 
 int AvH264Encoder::allocNewAvFrame()
@@ -70,9 +70,9 @@ int AvH264Encoder::allocNewAvFrame()
         return -1;
     }
 
-    mAvFrame->format = mCdcCtxt->pix_fmt;
-    mAvFrame->width = mCdcCtxt->width;
-    mAvFrame->height = mCdcCtxt->height;
+    mAvFrame->format = mCodecCtxt->pix_fmt;
+    mAvFrame->width = mCodecCtxt->width;
+    mAvFrame->height = mCodecCtxt->height;
 
     // alloc memory
     if ((av_frame_get_buffer(mAvFrame, 0) < 0) ||
@@ -89,10 +89,10 @@ int AvH264Encoder::allocNewAvFrame()
 
 void AvH264Encoder::close()
 {
-    if (mCdcCtxt)
+    if (mCodecCtxt)
     {
-        avcodec_free_context(&mCdcCtxt);
-        mCdcCtxt = NULL;
+        avcodec_free_context(&mCodecCtxt);
+        mCodecCtxt = NULL;
     }
     if (mAvFrame)
     {
@@ -106,24 +106,25 @@ void AvH264Encoder::close()
     }
 }
 
-const AVPacket* AvH264Encoder::encode(const cv::Mat& mat)
+AVPacket* AvH264Encoder::encode(cv::Mat& mat)
 {
     if (mat.empty())
     {
         return NULL;
     }
-    cv::resize(mat, mCvFrameEdited, mCvSize);
-    cv::cvtColor(mCvFrameEdited, mCvFrameEdited, cv::COLOR_BGR2YUV_I420);
+    cv::resize(mat, mat, mCvSize);
+    cv::cvtColor(mat, mat, cv::COLOR_BGR2YUV_I420);
 
-    mAvFrame->data[0] = mCvFrameEdited.data;
-    mAvFrame->data[1] = mCvFrameEdited.data + mFrameSize;
-    mAvFrame->data[2] = mCvFrameEdited.data + mFrameSize * 5 / 4;
+    mAvFrame->data[0] = mat.data;
+    mAvFrame->data[1] = mat.data + mFrameSize;
+    mAvFrame->data[2] = mat.data + mFrameSize * 5 / 4;
     mAvFrame->pts = mPts++;
 
-    if ((avcodec_send_frame(mCdcCtxt, mAvFrame) >= 0) &&
-        (avcodec_receive_packet(mCdcCtxt, mAvPacket) == 0))
+    if ((avcodec_send_frame(mCodecCtxt, mAvFrame) >= 0) &&
+        (avcodec_receive_packet(mCodecCtxt, mAvPacket) == 0))
     {
         mAvPacket->stream_index = 0;
+        return mAvPacket;
     }
-    return mAvPacket;
+    return NULL;
 }

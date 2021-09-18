@@ -17,7 +17,7 @@ NetworkManager::NetworkManager(uint16_t port, uint16_t num_of_streams) noexcept 
 
 NetworkManager::~NetworkManager()
 {
-	IThread::join();
+	NetworkManager::stop();
 }
 
 void NetworkManager::start() noexcept(false)
@@ -42,14 +42,12 @@ void NetworkManager::stop() noexcept
 		network_client = NULL;
 	}
 	CSocket::closeSocket();
-	IThread::detach();
+	IThread::join();
 }
 
 void NetworkManager::appendStream(const std::string& stream)
 {
-	mMutex.lock();
 	mPackage.appendStream(stream.c_str());
-	mMutex.unlock();
 }
 
 void NetworkManager::threadEntry()
@@ -66,12 +64,10 @@ void NetworkManager::threadEntry()
 			{
 				network_client->start();
 			}
-			network_client = NULL;
 		}
 		catch (const CSocketException&)
 		{
 			break;
 		}
-		
 	}
 }

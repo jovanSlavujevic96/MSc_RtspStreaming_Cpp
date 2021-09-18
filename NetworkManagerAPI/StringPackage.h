@@ -7,18 +7,18 @@
 class StringPackage : public IPackage
 {
 public:
-	explicit StringPackage(uint16_t max_size);
+	explicit StringPackage(size_t max_size);
 	
 	const char* cData() const override;
-	uint16_t getCurrentSize() const override;
-	uint16_t getMaxSize() const override;
+	size_t getCurrentSize() const override;
+	size_t getMaxSize() const override;
 
-	void setCurrentSize(uint16_t curr_size);
+	void setCurrentSize(size_t curr_size);
 private:
 	char* data() override;
 
-	uint16_t mMaxSize;
-	uint16_t mCurrentSize = 0;
+	size_t mMaxSize;
+	size_t mCurrentSize = 0;
 
 	std::unique_ptr<char[]> mSmartString = nullptr;
 };

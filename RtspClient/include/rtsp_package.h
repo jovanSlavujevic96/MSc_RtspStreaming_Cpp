@@ -9,7 +9,7 @@
 class RtspPackage : public IPackage
 {
 public:
-	RtspPackage(uint16_t size = MAX_MESSAGE_LEN);
+	RtspPackage(size_t size = MAX_MESSAGE_LEN);
 	~RtspPackage() = default;
 
 	const char* cData() const override;
@@ -17,10 +17,10 @@ public:
 
 	void setCurrentSize(uint16_t size);
 
-	uint16_t getCurrentSize() const override;
-	uint16_t getMaxSize() const override;
+	size_t getCurrentSize() const override;
+	size_t getMaxSize() const override;
 private:
-	uint16_t mCurrentSize;
-	uint16_t mCapacity;
+	size_t mCurrentSize;
+	size_t mCapacity;
 	std::unique_ptr<char[]> mData;
 };

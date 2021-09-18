@@ -1,6 +1,6 @@
 #include "rtp_frame_package.h"
 
-RtpFramePackage::RtpFramePackage(uint16_t size) :
+RtpFramePackage::RtpFramePackage(size_t size) :
 	mSize{size}
 {
 	mData = std::make_unique<uint8_t[]>(mSize);
@@ -17,12 +17,12 @@ char* RtpFramePackage::data()
 	return (char*)mData.get();
 }
 
-uint16_t RtpFramePackage::getCurrentSize() const
+size_t RtpFramePackage::getCurrentSize() const
 {
 	return mSize;
 }
 
-uint16_t RtpFramePackage::getMaxSize() const
+size_t RtpFramePackage::getMaxSize() const
 {
 	return mSize;
 }

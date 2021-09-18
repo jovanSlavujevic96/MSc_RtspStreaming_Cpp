@@ -1,6 +1,6 @@
 #include "rtsp_package.h"
 
-RtspPackage::RtspPackage(uint16_t size) :
+RtspPackage::RtspPackage(size_t size) :
 	mCapacity{size},
 	mCurrentSize{0},
 	mData{std::make_unique<char[]>(mCapacity)}
@@ -22,12 +22,12 @@ void RtspPackage::setCurrentSize(uint16_t size)
 	mCurrentSize = size;
 }
 
-uint16_t RtspPackage::getCurrentSize() const
+size_t RtspPackage::getCurrentSize() const
 {
 	return mCurrentSize;
 }
 
-uint16_t RtspPackage::getMaxSize() const
+size_t RtspPackage::getMaxSize() const
 {
 	return mCapacity;
 }

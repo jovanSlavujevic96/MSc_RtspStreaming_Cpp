@@ -22,15 +22,14 @@ public:
     int open(const AvH264EncConfig& h264_config);
     int allocNewAvFrame();
     void close();
-    const AVPacket* encode(const cv::Mat& mat);
+    AVPacket* encode(cv::Mat& mat);
 
 private:
-    AVCodec* mCdc;
-    AVCodecContext* mCdcCtxt;
+    AVCodec* mCodec;
+    AVCodecContext* mCodecCtxt;
     AVFrame* mAvFrame;
     AVPacket* mAvPacket;
     cv::Size mCvSize;
-    cv::Mat mCvFrameEdited;
     int32_t mFrameSize;
     int32_t mPts;
 };

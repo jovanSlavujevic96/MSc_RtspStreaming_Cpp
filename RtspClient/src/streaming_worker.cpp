@@ -24,7 +24,6 @@ StreamingWorker::StreamingWorker() :
 	mRtpServerPort = 0;
 	mIsMulticast = true;
 	mRtpClient = NULL;
-	mThreadRunning = false;
 }
 
 StreamingWorker::~StreamingWorker()
@@ -49,25 +48,23 @@ void StreamingWorker::start() noexcept(false)
 	}
 
 
-	if (mThreadRunning)
+	if (QThread::isRunning())
 	{
         emit dropInfo("Information", "RTSP Streaming Client is already running.");
 		return;
 	}
 	QThread::setTerminationEnabled(true);
 	QThread::start(Priority::HighestPriority);
-	mThreadRunning = true;
 }
 
 void StreamingWorker::stop() noexcept(false)
 {
 // terminate thread running
-	if (!mThreadRunning)
+	if (!QThread::isRunning())
 	{
-        emit dropInfo("Information", "RTSP Streaming Client is already closed..");
+		emit dropInfo("Information", "RTSP Streaming Client is already closed..");
 		return;
 	}
-	mThreadRunning = false;
 	QThread::terminate();
 
 // stop RTP client
@@ -129,7 +126,7 @@ void StreamingWorker::run()
     uint8_t rtsp_offset;
     uint8_t retries = MAX_RETRIES;
 
-    while (mThreadRunning)
+	while (true)
 	{
 		try
 		{
@@ -196,5 +193,4 @@ void StreamingWorker::run()
 		display_frame = false;
 		first_frame = false;
     }
-    mThreadRunning = false;
 }

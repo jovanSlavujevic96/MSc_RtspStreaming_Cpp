@@ -24,7 +24,6 @@ private: //fields
 	uint16_t mRtpServerPort;
 	bool mIsMulticast;
 	IClient* mRtpClient;
-	bool mThreadRunning;
 	std::unique_ptr<AvH264Decoder> mDecoder;
 	RtpFramePackage mRtpPackage;
 	cv::Mat mCvFrame;
@@ -46,7 +45,6 @@ public:
 	inline constexpr uint16_t getRtpClientPort() const { return mRtpClientPort; }
 	inline constexpr uint16_t getRtpServerPort() const { return mRtpServerPort; }
 	inline constexpr bool IsRtpMulticast() const { return mIsMulticast; }
-	inline constexpr bool getRunning() const { return mThreadRunning; }
 
 	void start() noexcept(false);
 	void stop() noexcept(false);

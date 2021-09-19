@@ -5,11 +5,11 @@
 #include "NetworkClientHandler.h"
 #include "NetworkManager.h"
 
-NetworkManager::NetworkManager(uint16_t port, uint16_t num_of_streams) noexcept :
+NetworkManager::NetworkManager(uint16_t port, size_t num_of_streams) noexcept :
 	CTcpServer{port},
 	mPackage{ num_of_streams }
 {
-	mAllocSocketFunction = [this](SOCKET fd, std::unique_ptr<sockaddr_in> addr) -> std::unique_ptr<CSocket> 
+	CTcpServer::mAllocSocketFunction = [this](SOCKET fd, std::unique_ptr<sockaddr_in> addr) -> std::unique_ptr<CSocket>
 		{ 
 			return std::make_unique<NetworkClientHandler>(fd, std::move(addr), mPackage); 
 		};
@@ -39,7 +39,6 @@ void NetworkManager::stop() noexcept
 		{
 			network_client->stop();
 		}
-		network_client = NULL;
 	}
 	CSocket::closeSocket();
 	IThread::join();

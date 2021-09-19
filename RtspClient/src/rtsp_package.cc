@@ -22,6 +22,14 @@ void RtspPackage::setCurrentSize(uint16_t size)
 	mCurrentSize = size;
 }
 
+void RtspPackage::clear()
+{
+	if (mCapacity)
+	{
+		std::memset(mData.get(), 0, mCapacity);
+	}
+}
+
 size_t RtspPackage::getCurrentSize() const
 {
 	return mCurrentSize;

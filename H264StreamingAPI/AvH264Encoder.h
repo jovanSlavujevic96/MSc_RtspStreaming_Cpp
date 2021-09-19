@@ -16,7 +16,8 @@ extern "C"
 class AvH264Encoder
 {
 public:
-    AvH264Encoder();
+    explicit AvH264Encoder();
+    AvH264Encoder(const AvH264Encoder& encoder);
     ~AvH264Encoder();
 
     int open(const AvH264EncConfig& h264_config);

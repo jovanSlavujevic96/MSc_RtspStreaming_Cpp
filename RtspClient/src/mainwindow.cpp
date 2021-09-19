@@ -326,6 +326,7 @@ void MainWindow::rtspOptions() noexcept(false)
         sendingMessage = ss.str();
     }
     clientRtsp << sendingMessage;
+    rtsp_message.clear();
     uint16_t ret = (uint16_t)(clientRtsp >> &rtsp_message);
     rtsp_message.setCurrentSize(ret);
     const std::vector<const char*>& responseLine = ::getResponseLines(rtsp_message.cData());
@@ -353,6 +354,7 @@ void MainWindow::rtspDescribe() noexcept(false)
         sendingMessage = ss.str();
     }
     clientRtsp << sendingMessage;
+    rtsp_message.clear();
     uint16_t ret = (uint16_t)(clientRtsp >> &rtsp_message);
     rtsp_message.setCurrentSize(ret);
     const std::vector<const char*>& responseLine = ::getResponseLines(rtsp_message.cData());
@@ -446,6 +448,7 @@ void MainWindow::rtspSetup() noexcept(false)
         sendingMessage = ss.str();
     }
     clientRtsp << sendingMessage;
+    rtsp_message.clear();
     uint16_t rcvBytes;
     uint16_t ret[2] = { 0 };
     rcvBytes = (uint16_t)(clientRtsp >> &rtsp_message);
@@ -533,6 +536,7 @@ void MainWindow::rtspPlay() noexcept(false)
         sendingMessage = ss.str();
     }
     clientRtsp << sendingMessage;
+    rtsp_message.clear();
     uint16_t ret = (uint16_t)(clientRtsp >> &rtsp_message);
     rtsp_message.setCurrentSize(ret);
     const std::vector<const char*>& responseLine = ::getResponseLines(rtsp_message.cData());
@@ -559,6 +563,7 @@ void MainWindow::rtspTeardown() noexcept(false)
         sendingMessage = ss.str();
     }
     clientRtsp << sendingMessage;
+    rtsp_message.clear();
     uint16_t ret = (uint16_t)(clientRtsp >> &rtsp_message);
     rtsp_message.setCurrentSize(ret);
     const std::vector<const char*>& responseLine = ::getResponseLines(rtsp_message.cData());

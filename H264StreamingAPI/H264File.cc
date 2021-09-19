@@ -22,7 +22,6 @@ bool H264File::Open(const char* path)
 	{
 		return false;
 	}
-
 	return true;
 }
 

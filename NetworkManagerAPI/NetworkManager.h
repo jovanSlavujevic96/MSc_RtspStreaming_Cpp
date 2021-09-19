@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <string>
-#include <mutex>
+#include <condition_variable>
 
 #include "ithread.h"
 #include "ctcp_server.h"
@@ -14,7 +14,7 @@ class NetworkManager :
 	public IThread
 {
 public:
-	NetworkManager(uint16_t port, uint16_t num_of_streams) noexcept;
+	NetworkManager(uint16_t port, size_t num_of_streams) noexcept;
 	~NetworkManager();
 
 	void start() noexcept(false);

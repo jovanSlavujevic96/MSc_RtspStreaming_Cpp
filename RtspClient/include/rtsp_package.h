@@ -16,6 +16,7 @@ public:
 	char* data() override;
 
 	void setCurrentSize(uint16_t size);
+	void clear();
 
 	size_t getCurrentSize() const override;
 	size_t getMaxSize() const override;

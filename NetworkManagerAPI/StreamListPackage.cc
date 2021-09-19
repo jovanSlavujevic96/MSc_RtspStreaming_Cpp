@@ -1,6 +1,8 @@
+#if defined(WIN32) || defined(_WIN32)
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
-#endif//_CRT_SECURE_NO_WARNINGS
+#endif //_CRT_SECURE_NO_WARNINGS
+#endif //defined(WIN32) || defined(_WIN32)
 
 #include "StreamListPackage.h"
 

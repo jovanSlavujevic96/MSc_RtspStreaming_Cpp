@@ -27,13 +27,11 @@ struct AVFrame
 {	
 	bool toFree;
 	uint8_t* buffer = NULL;
-	//std::shared_ptr<uint8_t> buffer = nullptr;
 	uint32_t size;
 	uint8_t  type;
 	uint32_t timestamp;
 
 	AVFrame(uint32_t size) :
-		//buffer(new uint8_t[(!size) ? 1 : size], std::default_delete< uint8_t[]>())
 		buffer (new uint8_t[(!size) ? 1 : size] )
 	{
 		this->size = size;

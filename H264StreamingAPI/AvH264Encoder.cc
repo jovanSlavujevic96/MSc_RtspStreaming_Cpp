@@ -10,6 +10,24 @@ AvH264Encoder::AvH264Encoder()
     mAvPacket = NULL;
 }
 
+AvH264Encoder::AvH264Encoder(const AvH264Encoder& encoder)
+{
+    AvH264Encoder* encoder_ = const_cast<AvH264Encoder*>(&encoder);
+
+    mFrameSize = encoder_->mFrameSize;
+    mPts = encoder_->mPts;
+    mCodec = encoder_->mCodec;
+    mCodecCtxt = encoder_->mCodecCtxt;
+    mAvFrame = encoder_->mAvFrame;
+    mAvPacket = encoder_->mAvPacket;
+    mCvSize = encoder_->mCvSize;
+
+    encoder_->mCodec = NULL;
+    encoder_->mCodecCtxt = NULL;
+    encoder_->mAvFrame = NULL;
+    encoder_->mAvPacket = NULL;
+}
+
 AvH264Encoder::~AvH264Encoder()
 {
     AvH264Encoder::close();

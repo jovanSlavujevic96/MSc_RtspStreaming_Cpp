@@ -58,7 +58,7 @@ MainWindow::MainWindow(QWidget* parent) :
 MainWindow::~MainWindow()
 {
     mStreamingWorker.stop(false /*drop_info*/);
-    mNetworkUserWorker.stop();
+    mNetworkUserWorker.stop(false /*drop_info*/);
     if (rtsp_client)
     {
         delete rtsp_client;

@@ -15,7 +15,7 @@
 
 #include "H264StreamingAPI/AvH264Encoder.h"
 #include "H264StreamingAPI/AvH264Writer.h"
-#include "H264StreamingAPI/H264File.h"
+#include "H264StreamingAPI/Timestamp.h"
 #include "NetworkManagerAPI/NetworkManager.h"
 #include "SocketNetworking/socket_net/include/socket_utils.h"
 
@@ -35,7 +35,6 @@ static void LiveStreamThread(cv::VideoCapture* video_capture, AvH264Encoder* h26
     std::shared_ptr<xop::RtspServer> rtsp_server, xop::MediaSessionId session_id, xop::MediaChannelId channel_id);
 static void OnDemandStreamThread(AvH264Writer* h264_writer, std::shared_ptr<xop::RtspServer> rtsp_server, NetworkManager* manager,
     xop::MediaSessionId session_id, xop::MediaChannelId channel_id, std::shared_ptr<std::condition_variable> condition);
-static std::string getTimestamp();
 
 struct RtspStreamInfo
 {
@@ -209,7 +208,7 @@ int __cdecl main()
         {
             continue;
         }
-        manager->update(session->GetRtspUrlSuffix(), session->GetRtspUrl(), true /*is_live*/, false /*is_busy*/, false /*send*/);
+        manager->updateLiveStream(session->GetRtspUrlSuffix(), session->GetRtspUrl());
     }
     try
     {
@@ -322,7 +321,7 @@ static void LiveStreamThread(cv::VideoCapture* video_capture, AvH264Encoder* h26
         {
             break;
         }
-        cv::putText(frame, ::getTimestamp(), cv::Point(30, 30), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(200, 200, 250), 1, cv::LINE_AA);
+        cv::putText(frame, ::getLongTimestampStr(), cv::Point(30, 30), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(200, 200, 250), 1, cv::LINE_AA);
         av_packet = h264_encoder->encode(frame);
         if (!av_packet)
         {
@@ -354,7 +353,6 @@ static void LiveStreamThread(cv::VideoCapture* video_capture, AvH264Encoder* h26
 static void OnDemandStreamThread(AvH264Writer* h264_writer, std::shared_ptr<xop::RtspServer> rtsp_server, NetworkManager* manager,
     xop::MediaSessionId session_id, xop::MediaChannelId channel_id, std::shared_ptr<std::condition_variable> condition)
 {
-    H264File h264_file;
     std::string current_recording_file;
     const int buf_size = 2000000;
     xop::AVFrame videoFrame(buf_size);
@@ -383,23 +381,8 @@ static void OnDemandStreamThread(AvH264Writer* h264_writer, std::shared_ptr<xop:
     std::cout << "Play URL   : " << session->GetRtspUrl() << std::endl;
     std::cout << "=================================================================\n" << std::flush;
 
-    manager->update(session->GetRtspUrlSuffix(), session->GetRtspUrl(), false /*is_live*/, false /*is_busy*/, true /*send*/);
+    manager->updateOnDemandStream(session->GetRtspUrlSuffix(), session->GetRtspUrl(), false /*is_busy*/);
     mutex.unlock();
 
     // TO DO : Move this from here.
-}
-
-static std::string getTimestamp()
-{
-    std::time_t currTimestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    std::string currTimestampString;
-#if defined(WIN32) || defined(_WIN32)
-    char timestamp[1024u];
-    ctime_s(timestamp, 1024u, &currTimestamp);
-    currTimestampString = timestamp;
-#elif defined(__linux) || defined(__linux__)
-    currTimestampString = std::ctime(&currTimestamp);
-#endif //defined(WIN32) || defined(_WIN32)
-    currTimestampString.resize(currTimestampString.size() - 1);
-    return currTimestampString;
 }

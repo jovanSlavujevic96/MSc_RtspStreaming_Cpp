@@ -7,7 +7,8 @@
 #include "ithread.h"
 #include "ctcp_server.h"
 
-struct StreamInfo;
+struct OnDemandStreamInfo;
+struct LiveStreamInfo;
 
 class NetworkManager : 
 	public CTcpServer, 
@@ -20,12 +21,16 @@ public:
 	void start() noexcept(false);
 	void stop() noexcept;
 
-	void update(const std::string& stream, const std::string& url, bool is_live, bool is_busy, bool send=true);
-	void update(const char* stream, const char* url, bool is_live, bool is_busy, bool send = true);
+	void updateLiveStream(const std::string& stream, const std::string& url);
+	void updateOnDemandStream(const std::string& stream, const std::string& url, bool is_busy);
 private:
 	void threadEntry() override final;
 
-	std::vector<StreamInfo*> mStreamsInfoList;
+	void updateStreamMessage();
+	void sendStreamMessage();
+
+	std::vector<LiveStreamInfo*> mLiveStreams;
+	std::vector<OnDemandStreamInfo*> mOnDemandStreams;
 	std::string mStreamsInfoMessage;
 	std::recursive_mutex mStreamsInfoMutex;
 };

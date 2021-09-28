@@ -57,7 +57,7 @@ void StreamingWorker::start() noexcept(false)
 	QThread::start(Priority::HighestPriority);
 }
 
-void StreamingWorker::stop(bool drop_info) noexcept(false)
+void StreamingWorker::stop(bool drop_info) noexcept
 {
 // terminate thread running
 	if (!QThread::isRunning())

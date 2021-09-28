@@ -36,12 +36,15 @@ void NetworkUserWorker::start() noexcept(false)
 	QThread::start(Priority::HighestPriority);
 }
 
-void NetworkUserWorker::stop() noexcept(false)
+void NetworkUserWorker::stop(bool drop_info) noexcept
 {
 // terminate thread running
 	if (!QThread::isRunning())
 	{
-		emit dropInfo("Information", "RTSP Streaming Client is already closed..");
+		if (drop_info)
+		{
+			emit dropInfo("Information", "RTSP Streaming Client is already closed..");
+		}
 		return;
 	}
 	QThread::terminate();

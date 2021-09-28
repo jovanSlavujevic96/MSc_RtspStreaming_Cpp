@@ -22,7 +22,7 @@ int AvH264Reader::initReader(const char* fileName)
 	ret = avformat_open_input(&mInputContext, fileName, NULL, NULL);
 	if (ret < 0)
 	{
-		std::cerr << "fail to avforamt_open_input(\"" << fileName << "\"): ret=" << ret << std::endl << std::flush;
+		std::cerr << "fail to avformat_open_input(\"" << fileName << "\"): ret=" << ret << std::endl << std::flush;
 		return 1;
 	}
 

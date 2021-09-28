@@ -6,18 +6,18 @@
 #include "NetworkClientHandler.h"
 #include "NetworkManager.h"
 
-struct StreamInfo
+struct LiveStreamInfo
 {
 	std::string stream;
 	std::string url;
-	bool is_live;
-	bool is_busy;
 };
 
-inline constexpr bool sortStreamInfo(const StreamInfo* left, const StreamInfo* right)
+struct OnDemandStreamInfo
 {
-	return left->is_live;
-}
+	std::string stream;
+	std::string url;
+	bool is_busy;
+};
 
 NetworkManager::NetworkManager(uint16_t port) noexcept :
 	CTcpServer{port}
@@ -32,7 +32,12 @@ NetworkManager::~NetworkManager()
 {
 	NetworkManager::stop();
 
-	for (StreamInfo* stream_info : mStreamsInfoList)
+	for (OnDemandStreamInfo* stream_info : mOnDemandStreams)
+	{
+		delete stream_info;
+	}
+
+	for (LiveStreamInfo* stream_info : mLiveStreams)
 	{
 		delete stream_info;
 	}
@@ -62,16 +67,11 @@ void NetworkManager::stop() noexcept
 	IThread::join();
 }
 
-void NetworkManager::update(const std::string& stream, const std::string& url, bool is_live, bool is_busy, bool send)
+void NetworkManager::updateLiveStream(const std::string& stream, const std::string& url)
 {
-	NetworkManager::update(stream.c_str(), url.c_str(), is_live, is_busy, send);
-}
-
-void NetworkManager::update(const char* stream, const char* url, bool is_live, bool is_busy, bool send)
-{
-	StreamInfo* tmp = NULL;
+	LiveStreamInfo* tmp = NULL;
 	mStreamsInfoMutex.lock();
-	for (StreamInfo* stream_info : mStreamsInfoList)
+	for (LiveStreamInfo* stream_info : mLiveStreams)
 	{
 		if (stream_info->stream == stream)
 		{
@@ -79,50 +79,47 @@ void NetworkManager::update(const char* stream, const char* url, bool is_live, b
 			break;
 		}
 	}
+	if (tmp)
+	{
+		goto unlock;
+	}
+	mLiveStreams.push_back(new LiveStreamInfo{ stream, url });
+
+	NetworkManager::updateStreamMessage();
+	NetworkManager::sendStreamMessage();
+unlock:
+	mStreamsInfoMutex.unlock();
+}
+
+void NetworkManager::updateOnDemandStream(const std::string& stream, const std::string& url, bool is_busy)
+{
+	OnDemandStreamInfo* tmp = NULL;
+	mStreamsInfoMutex.lock();
+	for (OnDemandStreamInfo* stream_info : mOnDemandStreams)
+	{
+		if (stream_info->stream == stream)
+		{
+			if ( (stream_info->is_busy == is_busy) &&
+				 (url == "" || stream_info->url == url) )
+			{
+				goto unlock;
+			}
+			tmp = stream_info;
+			break;
+		}
+	}
 	if (!tmp)
 	{
-		tmp = new StreamInfo;
+		tmp = new OnDemandStreamInfo;
 		tmp->stream = stream;
 		tmp->url = url;
-		mStreamsInfoList.push_back(tmp);
+		mOnDemandStreams.push_back(tmp);
 	}
-	tmp->is_live = is_live;
 	tmp->is_busy = is_busy;
 
-	std::sort(mStreamsInfoList.begin(), mStreamsInfoList.end(), ::sortStreamInfo);
-
-	mStreamsInfoMessage = "CMD:STREAM_LIST\r\n";
-	for (StreamInfo* stream_info : mStreamsInfoList)
-	{
-		if (stream_info->is_busy)
-		{
-			continue;
-		}
-		if (stream_info->is_live)
-		{
-			mStreamsInfoMessage += "LIVE:";
-		}
-		mStreamsInfoMessage += stream_info->stream + "\r\n";
-		mStreamsInfoMessage += stream_info->url + "\r\n";
-	}
-	mStreamsInfoMessage += "\r\n";
-
-	if (!send)
-	{
-		goto exit;
-	}
-	for (const std::unique_ptr<CSocket>& sender : CTcpServer::mClientSockets)
-	{
-		try
-		{
-			*sender.get() << mStreamsInfoMessage;
-		}
-		catch (...)
-		{
-			continue;
-		}
-	}
-exit:
+	NetworkManager::updateStreamMessage();
+	NetworkManager::sendStreamMessage();
+unlock:
 	mStreamsInfoMutex.unlock();
 }
 
@@ -147,6 +144,43 @@ void NetworkManager::threadEntry()
 		catch (const CSocketException&)
 		{
 			break;
+		}
+	}
+}
+
+void NetworkManager::updateStreamMessage()
+{
+	mStreamsInfoMessage = "CMD:STREAM_LIST\r\n";
+
+	for (LiveStreamInfo* stream_info : mLiveStreams)
+	{
+		mStreamsInfoMessage += "LIVE:" + stream_info->stream + "\r\n";
+		mStreamsInfoMessage += stream_info->url + "\r\n";
+	}
+
+	for (OnDemandStreamInfo* stream_info : mOnDemandStreams)
+	{
+		if (stream_info->is_busy)
+		{
+			continue;
+		}
+		mStreamsInfoMessage += stream_info->stream + "\r\n";
+		mStreamsInfoMessage += stream_info->url + "\r\n";
+	}
+	mStreamsInfoMessage += "\r\n";
+}
+
+void NetworkManager::sendStreamMessage()
+{
+	for (const std::unique_ptr<CSocket>& sender : CTcpServer::mClientSockets)
+	{
+		try
+		{
+			*sender.get() << mStreamsInfoMessage;
+		}
+		catch (...)
+		{
+			continue;
 		}
 	}
 }

@@ -17,7 +17,7 @@ public:
     ~NetworkUserWorker();
 
     void start() noexcept(false);
-    void stop() noexcept(false);
+    void stop(bool drop_info) noexcept;
 
 //setters
     inline void setNetworkIp(const std::string& ip) { mNetworkIp = ip; }

@@ -11,7 +11,7 @@ public:
 
 	bool Open(const char* path);
 	void Close();
-	constexpr bool IsOpened() const;
+	bool IsOpened() const;
 	int ReadFrame(char* in_buf, int32_t in_buf_size, bool* end);
 
 private:

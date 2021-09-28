@@ -47,7 +47,7 @@ public:
 	inline constexpr bool IsRtpMulticast() const { return mIsMulticast; }
 
 	void start() noexcept(false);
-	void stop() noexcept(false);
+	void stop(bool drop_info = true) noexcept(false);
 
 signals:
     void dropFrame(cv::Mat frame);

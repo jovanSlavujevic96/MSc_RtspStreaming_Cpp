@@ -19,6 +19,8 @@
 #include "NetworkManagerAPI/NetworkManager.h"
 #include "SocketNetworking/socket_net/include/socket_utils.h"
 
+#include "OnDemand/OnDemandSession.h"
+
 #define DEFAULT_WIDTH 640u
 #define DEFAULT_HEIGHT 480u
 
@@ -155,9 +157,21 @@ int __cdecl main()
     rtsp_stream_info.push_back({ -1, "on_demand_camera_1", false });
 
     // create RTSP Live stream(s)
+    streaming_iterator = 0;
     for (const RtspStreamInfo& stream_info : rtsp_stream_info)
     {
-        xop::MediaSession* session = xop::MediaSession::CreateNew(stream_info.stream_suffix);
+        xop::MediaSession* session;
+        if (!std::strstr(stream_info.stream_suffix.c_str(), "on_demand"))
+        {
+            session = xop::MediaSession::CreateNew(stream_info.stream_suffix);
+        }
+        else
+        {
+            OnDemandSession* demand_session = new OnDemandSession(stream_info.stream_suffix);
+            demand_session->bindH264Writer(&h264_writer[streaming_iterator]);
+            session = demand_session;
+            streaming_iterator = (streaming_iterator + 1) % h264_writer.size();
+        }
         std::string url = "rtsp://" + rtsp_ip + ":" + std::to_string(rtsp_port) + "/" + stream_info.stream_suffix;
         if (!session)
         {
@@ -188,15 +202,14 @@ int __cdecl main()
     std::cout << "Successfully created RTSP stream(s).\n" << std::flush;
 
     // init network manager
-    manager = std::make_unique<NetworkManager>(manager_port, rtsp_stream_info.size());
+    manager = std::make_unique<NetworkManager>(manager_port);
     for (xop::MediaSession* session : rtsp_session)
     {
-        const std::string& rtsp_url = session->GetRtspUrl();
-        if (std::strstr(rtsp_url.c_str(), "on_demand"))
+        if (dynamic_cast<OnDemandSession*>(session))
         {
             continue;
         }
-        manager->appendStream(rtsp_url);
+        manager->update(session->GetRtspUrlSuffix(), session->GetRtspUrl(), true /*is_live*/, false /*is_busy*/, false /*send*/);
     }
     try
     {
@@ -261,7 +274,7 @@ static void LiveStreamThread(cv::VideoCapture* video_capture, AvH264Encoder* h26
     std::shared_ptr<xop::RtspServer> rtsp_server, xop::MediaSessionId session_id, xop::MediaChannelId channel_id)
 {
     AVPacket* av_packet = NULL;
-    xop::AVFrame videoFrame;
+    xop::AVFrame video_frame;
     std::shared_ptr<xop::MediaSession> session = nullptr;
     cv::VideoCapture& capture = *video_capture;
     cv::Mat frame;
@@ -315,10 +328,10 @@ static void LiveStreamThread(cv::VideoCapture* video_capture, AvH264Encoder* h26
         {
             continue;
         }
-        videoFrame.timestamp = xop::H264Source::GetTimestamp();
-        videoFrame.buffer = av_packet->data;
-        videoFrame.size = av_packet->size;
-        rtsp_server->PushFrame(session_id, channel_id, videoFrame);
+        video_frame.timestamp = xop::H264Source::GetTimestamp();
+        video_frame.buffer = av_packet->data;
+        video_frame.size = av_packet->size;
+        rtsp_server->PushFrame(session_id, channel_id, video_frame);
         h264_writer->writeFrame(av_packet);
         frame_counter++;
         try
@@ -347,7 +360,6 @@ static void OnDemandStreamThread(AvH264Writer* h264_writer, std::shared_ptr<xop:
     xop::AVFrame videoFrame(buf_size);
     bool end_of_file = true;
     bool wait_for_file = false;
-    int frame_size;
     std::shared_ptr<xop::MediaSession> session = nullptr;
 
     std::mutex on_demand_mutex;
@@ -371,58 +383,10 @@ static void OnDemandStreamThread(AvH264Writer* h264_writer, std::shared_ptr<xop:
     std::cout << "Play URL   : " << session->GetRtspUrl() << std::endl;
     std::cout << "=================================================================\n" << std::flush;
 
-    manager->appendStream(session->GetRtspUrl());
+    manager->update(session->GetRtspUrlSuffix(), session->GetRtspUrl(), false /*is_live*/, false /*is_busy*/, true /*send*/);
     mutex.unlock();
 
-    while (true)
-    {
-        {
-            std::lock_guard<std::mutex> guard(mutex);
-            if (bExitThreads)
-            {
-                break;
-            }
-        }
-        if (end_of_file)
-        {
-            if (wait_for_file)
-            {
-                condition->wait(unique_lock);
-            }
-            current_recording_file = h264_writer->getRecordedFileName();
-            if (!h264_file.Open(current_recording_file.c_str()))
-            {
-                std::cerr << "OnDemandStreamThread : Failed to open file: " << current_recording_file << std::endl << "Exit from thread.\n" << std::flush;
-                break;
-            }
-        }
-        if (current_recording_file != h264_writer->getRecordedFileName())
-        {
-            end_of_file = true;
-            wait_for_file = false;
-            goto close_h264_file;
-        }
-        frame_size = h264_file.ReadFrame((char*)videoFrame.buffer, buf_size, &end_of_file);
-        if (frame_size > 0)
-        {
-            videoFrame.type = 0;
-            videoFrame.size = (uint32_t)frame_size;
-            videoFrame.timestamp = xop::H264Source::GetTimestamp();
-            rtsp_server->PushFrame(session_id, xop::channel_0, videoFrame);
-        }
-        else
-        {
-            break;
-        }
-close_h264_file:
-        if (end_of_file)
-        {
-            h264_file.Close();
-            wait_for_file = true;
-        }
-        net::Timer::Sleep(40);
-    }
-    h264_file.Close();
+    // TO DO : Move this from here.
 }
 
 static std::string getTimestamp()

@@ -18,7 +18,7 @@ public:
 	virtual std::string GetMediaDescription(uint16_t port=0); 
 	virtual std::string GetAttribute(); 
 
-	bool HandleFrame(MediaChannelId channelId, AVFrame& frame);
+	bool HandleFrame(MediaChannelId channelId, AVFrame& frame, std::shared_ptr<RtpConnection> connection) override;
 	static constexpr uint32_t GetTimestamp();
 
 private:

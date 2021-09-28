@@ -86,7 +86,7 @@ std::string AACSource::GetAttribute()  // RFC 3640
 	return std::string(buf);
 }
 
-bool AACSource::HandleFrame(MediaChannelId channel_id, AVFrame& frame)
+bool AACSource::HandleFrame(MediaChannelId channel_id, AVFrame& frame, std::shared_ptr<RtpConnection> connection)
 {
 	if (frame.size > (MAX_RTP_PAYLOAD_SIZE-AU_SIZE))
 	{
@@ -123,7 +123,7 @@ bool AACSource::HandleFrame(MediaChannelId channel_id, AVFrame& frame)
 
 	if (send_frame_callback_) 
 	{
-		send_frame_callback_(channel_id, rtp_pkt);
+		send_frame_callback_(channel_id, rtp_pkt, connection);
 	}
 
 	return true;

@@ -47,7 +47,7 @@ void StreamingWorker::start() noexcept(false)
 		throw;
 	}
 
-
+// start thread
 	if (QThread::isRunning())
 	{
         emit dropInfo("Information", "RTSP Streaming Client is already running.");
@@ -57,17 +57,20 @@ void StreamingWorker::start() noexcept(false)
 	QThread::start(Priority::HighestPriority);
 }
 
-void StreamingWorker::stop() noexcept(false)
+void StreamingWorker::stop(bool drop_info) noexcept(false)
 {
 // terminate thread running
 	if (!QThread::isRunning())
 	{
-		emit dropInfo("Information", "RTSP Streaming Client is already closed..");
+		if (drop_info)
+		{
+			emit dropInfo("Information", "RTSP Streaming Client is already closed..");
+		}
 		return;
 	}
 	QThread::terminate();
 
-// stop RTP client
+// kill RTP client
 	if (mRtpClient)
 	{
 		delete mRtpClient;

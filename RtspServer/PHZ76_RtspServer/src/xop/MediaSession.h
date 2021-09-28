@@ -25,14 +25,17 @@ public:
 	using NotifyConnectedCallback = std::function<void (MediaSessionId sessionId, std::string peer_ip, uint16_t peer_port)> ;
 	using NotifyDisconnectedCallback = std::function<void (MediaSessionId sessionId, std::string peer_ip, uint16_t peer_port)> ;
 
+	MediaSession(const char* url_suffxx);
+	MediaSession(const std::string& url_suffxx);
+
 	static MediaSession* CreateNew(const std::string& url_suffix);
 	static MediaSession* CreateNew(const char* url_suffix="live");
 	virtual ~MediaSession();
 
-	bool AddSource(MediaChannelId channel_id, MediaSource* source);
+	virtual bool AddSource(MediaChannelId channel_id, MediaSource* source);
 	bool RemoveSource(MediaChannelId channel_id);
 
-	bool StartMulticast();
+	virtual bool StartMulticast();
 
 	void AddNotifyConnectedCallback(const NotifyConnectedCallback& callback);
 	void AddNotifyDisconnectedCallback(const NotifyDisconnectedCallback& callback);
@@ -59,11 +62,7 @@ public:
 	const std::string& GetMulticastIp() const;
 	uint16_t GetMulticastPort(MediaChannelId channel_id) const;
 
-private:
-	friend class MediaSource;
-	friend class RtspServer;
-	MediaSession(const char* url_suffxx);
-
+protected:
 	MediaSessionId session_id_ = 0;
 	std::string url_;
 	std::string suffix_;
@@ -75,7 +74,7 @@ private:
 	std::vector<NotifyConnectedCallback> notify_connected_callbacks_;
 	std::vector<NotifyDisconnectedCallback> notify_disconnected_callbacks_;
 	std::mutex mutex_;
-	std::mutex map_mutex_;
+	std::recursive_mutex map_mutex_;
 	std::map<SOCKET, std::weak_ptr<RtpConnection>> clients_;
 
 	bool is_multicast_ = false;

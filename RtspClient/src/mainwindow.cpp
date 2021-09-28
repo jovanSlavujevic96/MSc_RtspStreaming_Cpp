@@ -41,26 +41,27 @@ MainWindow::MainWindow(QWidget* parent) :
     rtsp_format = "";
 
     rtsp_client = NULL;
-    network_user = NULL;
 
     QObject::connect(&mStreamingWorker, SIGNAL(dropFrame(cv::Mat)), this, SLOT(displayFrame(cv::Mat)));
     QObject::connect(&mStreamingWorker, SIGNAL(dropError(std::string, std::string)), this, SLOT(displayError(std::string, std::string)));
     QObject::connect(&mStreamingWorker, SIGNAL(dropWarning(std::string, std::string)), this, SLOT(displayWarning(std::string, std::string)));
     QObject::connect(&mStreamingWorker, SIGNAL(dropInfo(std::string, std::string)), this, SLOT(displayInfo(std::string, std::string)));
 
+    QObject::connect(&mNetworkUserWorker, SIGNAL(dropLists(std::vector<std::string>, std::vector<std::string>)), this, SLOT(displayLists(std::vector<std::string>, std::vector<std::string>)));
+    QObject::connect(&mNetworkUserWorker, SIGNAL(dropError(std::string, std::string)), this, SLOT(displayError(std::string, std::string)));
+    QObject::connect(&mNetworkUserWorker, SIGNAL(dropWarning(std::string, std::string)), this, SLOT(displayWarning(std::string, std::string)));
+    QObject::connect(&mNetworkUserWorker, SIGNAL(dropInfo(std::string, std::string)), this, SLOT(displayInfo(std::string, std::string)));
+
     MainWindow::stopRtspStream();
 }
 
 MainWindow::~MainWindow()
 {
-    MainWindow::stopRtspStream();
+    mStreamingWorker.stop(false /*drop_info*/);
+    mNetworkUserWorker.stop();
     if (rtsp_client)
     {
         delete rtsp_client;
-    }
-    if (network_user)
-    {
-        delete network_user;
     }
     delete ui;
 }
@@ -137,6 +138,17 @@ void MainWindow::displayFrame(cv::Mat frame_mat)
     ui->label->resize(ui->label->pixmap().size());
 }
 
+void MainWindow::displayLists(std::vector<std::string> streams, std::vector<std::string> urls)
+{
+    ui->rtspStreams_listWidget->clear();
+    stream_to_url_map.clear();
+    for (size_t i=0; i<streams.size(); i++)
+    {
+        stream_to_url_map.insert({ streams[i], urls[i] });
+        ui->rtspStreams_listWidget->addItem(streams[i].c_str());
+    }
+}
+
 void MainWindow::displayError(std::string title, std::string message)
 {
     QMessageBox::critical(this, tr(title.c_str()), tr(message.c_str()));
@@ -169,7 +181,6 @@ bool MainWindow::isMulticast(const char* ip) const
     address = ::htonl(address);
     return ((address >= 0xE8000100) && (address <= 0xE8FFFFFF));
 }
-
 
 void MainWindow::parseRtspUrl() noexcept(false)
 {
@@ -215,79 +226,53 @@ void MainWindow::parseRtspUrl() noexcept(false)
 
 void MainWindow::on_rtspStreams_listWidget_doubleClicked(const QModelIndex &index)
 {
-    std::string tmp = index.data(Qt::DisplayRole).toString().toStdString();
+    std::string tmpStream = index.data(Qt::DisplayRole).toString().toStdString();
+    std::string tmpUrl;
+
+    for (const std::pair<std::string, std::string>& pair : stream_to_url_map)
+    {
+        if (pair.first == tmpStream)
+        {
+            tmpUrl = pair.second;
+        }
+    }
+
     if (mStreamingWorker.isRunning())
     {
-        if (tmp == rtsp_url)
+        if (tmpUrl == rtsp_url)
         {
             MainWindow::displayInfo("Information", "Streaming is already running");
             return;
         }
         mStreamingWorker.stop();
     }
-    rtsp_url = tmp;
+    rtsp_url = tmpUrl;
     MainWindow::stopRtspStream();
     MainWindow::startRtspStream();
 }
 
 void MainWindow::on_connectToManager_button_clicked()
 {
-    if (!network_user)
+    mNetworkUserWorker.setNetworkIp("127.0.0.1");
+    mNetworkUserWorker.setNetworkPort(9089);
+    try
     {
-        network_user = new NetworkUser("127.0.0.1", 9089, 10);
-        try
-        {
-            network_user->initClient();
-        }
-        catch (const CSocketException& e)
-        {
-            delete network_user;
-            network_user = NULL;
-            displayError("Error on Network User connection", e.what());
-        }
+        mNetworkUserWorker.start();
         displayInfo("Connect To Manager", "Successfully connected to manager");
     }
-    else
+    catch (const CSocketException& e)
     {
-        displayInfo("Connect To Manager", "Already connected to manager");
+        displayError("Error on Network User connection", e.what());
+    }
+    catch (const std::exception& e)
+    {
+        displayError("Error on Network User startup", e.what());
     }
 }
 
 void MainWindow::on_get_streams_button_clicked()
 {
-    const StreamListPackage& list_pkg = network_user->getPacakge();
-    const char* stream;
-    if (!network_user)
-    {
-        displayWarning("Get Streams", "You are not connected to Network Manager.");
-        return;
-    }
-    try
-    {
-        bool ret = network_user->processRequest("SEND_STREAM_LIST", true);
-        if (!ret)
-        {
-            displayError("Error on Network User processing", "Bad request");
-            return;
-        }
-    }
-    catch (const CSocketException& e)
-    {
-        displayError("Error on Network User communication", e.what());
-        delete network_user;
-        network_user = NULL;
-        return;
-    }
-    ui->rtspStreams_listWidget->clear();
-    for (size_t i=0; i<list_pkg.getCurrentSize()/ARRAY_SIZE; ++i)
-    {
-        stream = list_pkg.getStream(i);
-        if (!std::strstr(stream, "rtsp://"))
-        {
-            break;
-        }
-        ui->rtspStreams_listWidget->addItem(stream);
-    }
+    // TO DELETE
 }
 
 void MainWindow::initRtspClient() noexcept(false)

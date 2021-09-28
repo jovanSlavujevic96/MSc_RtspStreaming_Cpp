@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <string>
+#include <map>
 
 #include <QMainWindow>
 
@@ -10,6 +11,7 @@
 #include "rtsp_package.h"
 #include "rtsp_method_enum.h"
 #include "streaming_worker.h"
+#include "network_user_worker.h"
 
 class CTcpClient;
 class NetworkUser;
@@ -29,6 +31,7 @@ public:
 
 public slots:
     void displayFrame(cv::Mat frame_mat);
+    void displayLists(std::vector<std::string> streams, std::vector<std::string> urls);
     void displayError(std::string title, std::string message);
     void displayWarning(std::string title, std::string message);
     void displayInfo(std::string title, std::string message);
@@ -57,13 +60,15 @@ private: //methods
     void rtspTeardown() noexcept(false);
 
 private: //fields
-    Ui::MainWindow *ui;
+    Ui::MainWindow* ui;
 
     QImage qt_image;
     StreamingWorker mStreamingWorker;
+    NetworkUserWorker mNetworkUserWorker;
+
+    std::map<std::string, std::string> stream_to_url_map;
 
     CTcpClient* rtsp_client;
-    NetworkUser* network_user;
     std::string rtsp_url;
     std::string rtsp_ip;
     std::string rtsp_suffix;

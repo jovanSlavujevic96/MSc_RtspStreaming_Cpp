@@ -49,7 +49,7 @@ std::string H265Source::GetAttribute()
 	return std::string("a=rtpmap:96 H265/90000");
 }
 
-bool H265Source::HandleFrame(MediaChannelId channelId, AVFrame& frame)
+bool H265Source::HandleFrame(MediaChannelId channelId, AVFrame& frame, std::shared_ptr<RtpConnection> connection)
 {
 	uint8_t *frame_buf  = frame.buffer;
 	uint32_t frame_size = frame.size;
@@ -68,7 +68,7 @@ bool H265Source::HandleFrame(MediaChannelId channelId, AVFrame& frame)
 		memcpy(rtp_pkt.data.get()+4+RTP_HEADER_SIZE, frame_buf, frame_size);
         
 		if (send_frame_callback_) {
-			if (!send_frame_callback_(channelId, rtp_pkt)) {
+			if (!send_frame_callback_(channelId, rtp_pkt, connection)) {
 				return false;
 			}          
 		}
@@ -98,7 +98,7 @@ bool H265Source::HandleFrame(MediaChannelId channelId, AVFrame& frame)
 
 			if (send_frame_callback_)
 			{
-				if (!send_frame_callback_(channelId, rtp_pkt))
+				if (!send_frame_callback_(channelId, rtp_pkt, connection))
 				{
 					return false;
 				}                
@@ -125,7 +125,7 @@ bool H265Source::HandleFrame(MediaChannelId channelId, AVFrame& frame)
 
 			if (send_frame_callback_)
 			{
-				if (!send_frame_callback_(channelId, rtp_pkt))
+				if (!send_frame_callback_(channelId, rtp_pkt, connection))
 				{
 					return false;
 				}

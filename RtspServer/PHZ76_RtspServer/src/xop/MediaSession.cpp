@@ -27,6 +27,19 @@ MediaSession::MediaSession(const char* url_suffxx) :
 	}
 }
 
+MediaSession::MediaSession(const std::string& url_suffxx) :
+	suffix_(url_suffxx),
+	media_sources_(MAX_MEDIA_CHANNEL),
+	buffer_(MAX_MEDIA_CHANNEL)
+{
+	has_new_client_ = false;
+	session_id_ = ++last_session_id_;
+
+	for (int n = 0; n < MAX_MEDIA_CHANNEL; n++) {
+		multicast_port_[n] = 0;
+	}
+}
+
 MediaSession* MediaSession::CreateNew(const std::string& url_suffix)
 {
 	return new MediaSession(url_suffix.c_str());
@@ -83,11 +96,12 @@ void MediaSession::SetRtspUrl(const char* suffix)
 bool MediaSession::AddSource(MediaChannelId channel_id, MediaSource* source)
 {
 	source->SetSendFrameCallback(
-		[this](MediaChannelId channel_id, const RtpPacket& pkt)
+		[this](MediaChannelId channel_id, const RtpPacket& pkt, std::shared_ptr<RtpConnection> connection)
 		{
 			static std::map<SOCKET, std::weak_ptr<xop::RtpConnection>>::iterator iter;
-			std::unique_lock<std::mutex> lock(map_mutex_);
+			std::lock_guard<std::recursive_mutex> lock(map_mutex_);
 			int ret;
+			(void)connection;
 			for (iter = clients_.begin(); iter != clients_.end();)
 			{
 				auto conn = iter->second.lock();
@@ -219,7 +233,7 @@ bool MediaSession::HandleFrame(MediaChannelId channel_id, AVFrame& frame)
 
 bool MediaSession::AddClient(SOCKET rtspfd, std::shared_ptr<RtpConnection> rtp_conn)
 {
-	std::lock_guard<std::mutex> lock(map_mutex_);
+	std::lock_guard<std::recursive_mutex> lock(map_mutex_);
 
 	auto iter = clients_.find (rtspfd);
 	if(iter == clients_.end()) {
@@ -238,7 +252,7 @@ bool MediaSession::AddClient(SOCKET rtspfd, std::shared_ptr<RtpConnection> rtp_c
 
 void MediaSession::RemoveClient(SOCKET rtspfd)
 {  
-	std::lock_guard<std::mutex> lock(map_mutex_);
+	std::lock_guard<std::recursive_mutex> lock(map_mutex_);
 
 	auto iter = clients_.find(rtspfd);
 	if (iter != clients_.end()) {

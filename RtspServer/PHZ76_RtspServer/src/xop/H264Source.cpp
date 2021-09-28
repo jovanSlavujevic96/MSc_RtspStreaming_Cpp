@@ -49,7 +49,7 @@ std::string H264Source::GetAttribute()
     return "a=rtpmap:96 H264/90000";
 }
 
-bool H264Source::HandleFrame(MediaChannelId channel_id, AVFrame& frame)
+bool H264Source::HandleFrame(MediaChannelId channel_id, AVFrame& frame, std::shared_ptr<RtpConnection> connection)
 {
     uint8_t* frame_buf  = frame.buffer;
     uint32_t frame_size = frame.size;
@@ -69,7 +69,7 @@ bool H264Source::HandleFrame(MediaChannelId channel_id, AVFrame& frame)
 
         if (send_frame_callback_) 
         {
-			 return send_frame_callback_(channel_id, rtp_pkt);
+			 return send_frame_callback_(channel_id, rtp_pkt, connection);
         }
     }
     else 
@@ -93,7 +93,7 @@ bool H264Source::HandleFrame(MediaChannelId channel_id, AVFrame& frame)
             rtp_pkt.data.get()[RTP_HEADER_SIZE+5] = FU_A[1];
             std::memcpy(rtp_pkt.data.get()+4+RTP_HEADER_SIZE+2, frame_buf, MAX_RTP_PAYLOAD_SIZE-2);
 
-            if (send_frame_callback_ && !send_frame_callback_(channel_id, rtp_pkt))
+            if (send_frame_callback_ && !send_frame_callback_(channel_id, rtp_pkt, connection))
             {
                 return false;
             }
@@ -114,9 +114,9 @@ bool H264Source::HandleFrame(MediaChannelId channel_id, AVFrame& frame)
         rtp_pkt.data.get()[RTP_HEADER_SIZE+5] = FU_A[1];
         std::memcpy(rtp_pkt.data.get()+4+RTP_HEADER_SIZE+2, frame_buf, frame_size);
 
-        if (send_frame_callback_) 
+        if (send_frame_callback_)
         {
-			return send_frame_callback_(channel_id, rtp_pkt);
+			return send_frame_callback_(channel_id, rtp_pkt, connection);
         }
     }
     return false;

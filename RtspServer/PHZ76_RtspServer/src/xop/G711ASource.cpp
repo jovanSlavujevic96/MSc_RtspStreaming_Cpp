@@ -48,7 +48,7 @@ std::string G711ASource::GetAttribute()
     return std::string("a=rtpmap:8 PCMA/8000/1");
 }
 
-bool G711ASource::HandleFrame(MediaChannelId channel_id, AVFrame& frame)
+bool G711ASource::HandleFrame(MediaChannelId channel_id, AVFrame& frame, std::shared_ptr<RtpConnection> connection)
 {
 	if (frame.size > MAX_RTP_PAYLOAD_SIZE)
 	{
@@ -68,7 +68,7 @@ bool G711ASource::HandleFrame(MediaChannelId channel_id, AVFrame& frame)
 
 	if (send_frame_callback_)
 	{
-		send_frame_callback_(channel_id, rtp_pkt);
+		send_frame_callback_(channel_id, rtp_pkt, connection);
 	}
 
 	return true;

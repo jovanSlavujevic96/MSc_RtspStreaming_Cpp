@@ -2,28 +2,30 @@
 
 #include <vector>
 #include <string>
-#include <condition_variable>
+#include <mutex>
 
 #include "ithread.h"
 #include "ctcp_server.h"
 
-#include "StreamListPackage.h"
+struct StreamInfo;
 
 class NetworkManager : 
 	public CTcpServer, 
 	public IThread
 {
 public:
-	NetworkManager(uint16_t port, size_t num_of_streams) noexcept;
+	NetworkManager(uint16_t port) noexcept;
 	~NetworkManager();
 
 	void start() noexcept(false);
 	void stop() noexcept;
 
-	void appendStream(const std::string& stream);
-
+	void update(const std::string& stream, const std::string& url, bool is_live, bool is_busy, bool send=true);
+	void update(const char* stream, const char* url, bool is_live, bool is_busy, bool send = true);
 private:
 	void threadEntry() override final;
 
-	StreamListPackage mPackage;
+	std::vector<StreamInfo*> mStreamsInfoList;
+	std::string mStreamsInfoMessage;
+	std::recursive_mutex mStreamsInfoMutex;
 };

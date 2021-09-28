@@ -18,7 +18,7 @@ public:
 	std::string GetMediaDescription(uint16_t port) override; 
 	std::string GetAttribute() override; 
 
-	bool HandleFrame(MediaChannelId channel_id, AVFrame& frame) override;
+	bool HandleFrame(MediaChannelId channel_id, AVFrame& frame, std::shared_ptr<RtpConnection> connection) override;
 	static inline constexpr uint32_t GetTimestamp()
 	{
 		auto time_point = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::steady_clock::now());

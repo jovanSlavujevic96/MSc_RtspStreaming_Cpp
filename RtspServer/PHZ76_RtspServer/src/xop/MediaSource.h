@@ -9,6 +9,7 @@
 #include "net/Socket.h"
 
 #include "media.h"
+#include "RtpConnection.h"
 #include "rtp.h"
 
 namespace xop
@@ -17,7 +18,7 @@ namespace xop
 class MediaSource
 {
 public:
-	using SendFrameCallback = std::function<bool (MediaChannelId channel_id, const RtpPacket& pkt)>;
+	using SendFrameCallback = std::function<bool (MediaChannelId channel_id, const RtpPacket& pkt, std::shared_ptr<RtpConnection> connection)>;
 
 	MediaSource() = default;
 	virtual ~MediaSource() = default;
@@ -26,8 +27,10 @@ public:
 
 	virtual std::string GetMediaDescription(uint16_t port=0) = 0;
 	virtual std::string GetAttribute()  = 0;
-	virtual bool HandleFrame(MediaChannelId channelId, AVFrame& frame) = 0;
-	
+
+	virtual bool HandleFrame(MediaChannelId channel_id, AVFrame& frame, std::shared_ptr<RtpConnection> connection) = 0;
+	inline bool HandleFrame(MediaChannelId channelId, AVFrame& frame) { return HandleFrame(channelId, frame, nullptr); }
+
 	void SetSendFrameCallback(const SendFrameCallback callback)	{ send_frame_callback_ = callback; }
 
 	uint32_t GetPayloadType() const { return payload_; }

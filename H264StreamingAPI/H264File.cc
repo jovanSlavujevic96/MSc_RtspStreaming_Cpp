@@ -36,7 +36,7 @@ void H264File::Close()
 	}
 }
 
-constexpr bool H264File::IsOpened() const
+bool H264File::IsOpened() const
 {
 	return (m_file != NULL);
 }

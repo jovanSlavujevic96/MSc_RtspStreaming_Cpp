@@ -6,13 +6,12 @@
 
 #define MESSAGE_LEN 1024u
 
-#define NUMBER_OF_STATUS_STRINGS 3u //(5-2)
+#define NUMBER_OF_STATUS_STRINGS 2u //(4-2)
 
 enum class NetworkClientHandler::eNetworkClientStatus
 {
 	REGISTER_USER = 0,
 	LOGIN_USER,
-	SEND_STREAM_LIST,
 	ERROR_MESSAGE,
 	NONE
 };
@@ -21,12 +20,10 @@ constexpr const char* const cNetworkClientStatusStrings[NUMBER_OF_STATUS_STRINGS
 {
 	"REGISTER_USER",
 	"LOGIN_USER",
-	"SEND_STREAM_LIST",
 };
 
-NetworkClientHandler::NetworkClientHandler(SOCKET sock_fd, std::unique_ptr<sockaddr_in> sock_addr, const StreamListPackage& package) :
+NetworkClientHandler::NetworkClientHandler(SOCKET sock_fd, std::unique_ptr<sockaddr_in> sock_addr) :
 	IWorkerSocket{sock_fd, std::move(sock_addr)},
-	mListPackage{package},
 	mClientStatus{ eNetworkClientStatus::NONE }
 {
 
@@ -75,14 +72,7 @@ void NetworkClientHandler::threadEntry()
 		NetworkClientHandler::formMessage(sndPkg);
 		try
 		{
-			if (eNetworkClientStatus::SEND_STREAM_LIST == mClientStatus)
-			{
-				this_ << &mListPackage;
-			}
-			else
-			{
-				this_ << sndPkg;
-			}
+			this_ << sndPkg;
 		}
 		catch (...)
 		{

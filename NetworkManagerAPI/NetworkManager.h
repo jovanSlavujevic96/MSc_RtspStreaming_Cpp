@@ -21,6 +21,8 @@ public:
 	void start() noexcept(false);
 	void stop() noexcept;
 
+	bool connectSql(const std::string& username, const std::string& password);
+
 	void updateLiveStream(const std::string& stream, const std::string& url);
 	void updateOnDemandStream(const std::string& stream, const std::string& url, std::time_t timestamp);
 private:
@@ -33,4 +35,7 @@ private:
 	std::vector<OnDemandStreamInfo*> mOnDemandStreams;
 	std::string mStreamsInfoMessage;
 	std::recursive_mutex mStreamsInfoMutex;
+
+	class SqlServer;
+	std::unique_ptr<SqlServer> mSqlServer;
 };

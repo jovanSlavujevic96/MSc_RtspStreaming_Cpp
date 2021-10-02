@@ -1,3 +1,5 @@
+#include <conio.h>
+
 #include "xop/RtspServer.h"
 #include "EnterpriseEmitter/EnterpriseEmitter.h"
 #include "SocketNetworking/socket_net/include/socket_utils.h"
@@ -64,6 +66,22 @@ int __cdecl main()
     std::cout << "Successfully started RTSP server.\n" << std::flush;
 
     // init network manager
+
+    std::string username;
+    std::string password;
+    std::cout << "Enter your username: ";
+    std::cin >> username;
+    std::cout << "Enter your password: ";
+    char ch = _getch();
+    while (ch != 13) //character 13 is enter
+    {
+        password.push_back(ch);
+        std::cout << '*';
+        ch = _getch();
+    }
+    std::cin.get();
+    std::cout << std::endl;
+
     manager = std::make_shared<NetworkManager>(manager_port);
     try
     {
@@ -73,6 +91,12 @@ int __cdecl main()
     catch (const std::exception& e)
     {
         std::cerr << "Exception on Network Manager init/start => " << e.what() << std::endl << std::flush;
+        return -1;
+    }
+    bool check = manager->connectSql(username, password);
+    if (!check)
+    {
+        std::cerr << "Failed to connect w/ SQL Server.\n";
         return -1;
     }
     std::cout << "Successfully started Network Manager.\n" << std::flush;

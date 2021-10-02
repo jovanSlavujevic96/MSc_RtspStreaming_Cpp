@@ -2,6 +2,12 @@
 #include <algorithm>
 
 #include "csocket_exception.h"
+#include "socket_utils.h"
+
+extern "C"
+{
+#include <mysql.h>
+}
 
 #include "NetworkClientHandler.h"
 #include "NetworkManager.h"
@@ -24,8 +30,27 @@ inline constexpr bool sortOnDemandStreamInfo(const OnDemandStreamInfo* left, con
 	return (left->timestamp < right->timestamp);
 }
 
+class NetworkManager::SqlServer
+{
+public:
+	SqlServer() = default;
+	~SqlServer() = default;
+
+	bool connect(const std::string& username, const std::string& password);
+private:
+	MYSQL* mConnector = NULL;
+};
+
+bool NetworkManager::SqlServer::connect(const std::string& username, const std::string& password)
+{
+	mConnector = mysql_init(NULL);
+	mConnector = mysql_real_connect(mConnector, "localhost", username.c_str(), password.c_str(), "rtsp_network_users", 0, NULL, 0);
+	return (mConnector != NULL);
+}
+
 NetworkManager::NetworkManager(uint16_t port) noexcept :
-	CTcpServer{port}
+	CTcpServer{port},
+	mSqlServer{std::make_unique<SqlServer>()}
 {
 	CTcpServer::mAllocSocketFunction = [this](SOCKET fd, std::unique_ptr<sockaddr_in> addr) -> std::unique_ptr<CSocket>
 		{ 
@@ -70,6 +95,11 @@ void NetworkManager::stop() noexcept
 	}
 	CSocket::closeSocket();
 	IThread::join();
+}
+
+bool NetworkManager::connectSql(const std::string& username, const std::string& password)
+{
+	return mSqlServer->connect(username, password);
 }
 
 void NetworkManager::updateLiveStream(const std::string& stream, const std::string& url)

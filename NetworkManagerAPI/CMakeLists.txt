@@ -1,5 +1,10 @@
 project(NetworkManagerAPI)
 
+if (WIN32)
+	set (MYSQL_INCLUDE_DIRS "$ENV{MYSQL_DIR}/include")
+	set (MYSQL_LIBRARIES "$ENV{MYSQL_DIR}/lib")
+endif()
+
 file(GLOB NETWORK_MANAGER_SRC_FILES 
 	"${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/*.cc"
@@ -13,4 +18,9 @@ file(GLOB NETWORK_MANAGER_HEADER_FILES
 add_library(${PROJECT_NAME} STATIC
 	"${NETWORK_MANAGER_HEADER_FILES}"
 	"${NETWORK_MANAGER_SRC_FILES}"
+)
+target_include_directories(${PROJECT_NAME} PRIVATE ${MYSQL_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PRIVATE
+	${MYSQL_LIBRARIES}/libmysql.lib
+	${MYSQL_LIBRARIES}/mysqlclient.lib
 )

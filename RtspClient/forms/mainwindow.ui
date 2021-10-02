@@ -53,24 +53,11 @@
      <string/>
     </property>
    </widget>
-   <widget class="QPushButton" name="get_streams_button">
-    <property name="geometry">
-     <rect>
-      <x>160</x>
-      <y>580</y>
-      <width>161</width>
-      <height>81</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>GET STREAMS</string>
-    </property>
-   </widget>
    <widget class="QListWidget" name="rtspStreams_listWidget">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>120</y>
+      <x>80</x>
+      <y>40</y>
       <width>401</width>
       <height>431</height>
      </rect>
@@ -85,14 +72,14 @@
    <widget class="QPushButton" name="connectToManager_button">
     <property name="geometry">
      <rect>
-      <x>160</x>
-      <y>20</y>
+      <x>200</x>
+      <y>580</y>
       <width>161</width>
       <height>81</height>
      </rect>
     </property>
     <property name="text">
-     <string>CONNECT TO MANAGER</string>
+     <string>CONNECT</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="runningStream_lineEdit">
@@ -111,6 +98,63 @@
     </property>
     <property name="readOnly">
      <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit">
+    <property name="geometry">
+     <rect>
+      <x>80</x>
+      <y>530</y>
+      <width>401</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="font">
+     <font>
+      <family>MS Shell Dlg 2</family>
+      <pointsize>14</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
+      <kerning>true</kerning>
+     </font>
+    </property>
+    <property name="text">
+     <string>127.0.0.1</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+    <property name="dragEnabled">
+     <bool>true</bool>
+    </property>
+    <property name="clearButtonEnabled">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="textlabel">
+    <property name="geometry">
+     <rect>
+      <x>90</x>
+      <y>490</y>
+      <width>401</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>ENTER IP ADDRESS OF NETWORK MANAGER</string>
     </property>
    </widget>
   </widget>

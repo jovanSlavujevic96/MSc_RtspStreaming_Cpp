@@ -21,6 +21,8 @@
 #define CONTENT_TYPE "application/sdp"
 #define FRAME_WIDTH 640u
 #define FRAME_HEIGHT 480u
+#define NETWORK_MANAGER_PORT 9089u
+#define LOCALHOST "127.0.0.1"
 
 static inline const size_t cRecNwlLen = std::strlen(RECURSION_NEWLINE);
 
@@ -29,7 +31,9 @@ static bool parseRtspResponseFirstTwoLines(const char* line1, const char* line2,
 
 MainWindow::MainWindow(QWidget* parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    ui(new Ui::MainWindow),
+    mNetworkUserPort{NETWORK_MANAGER_PORT},
+    mNetworkUserIp{LOCALHOST}
 {
     ui->setupUi(this);
 
@@ -229,7 +233,7 @@ void MainWindow::on_rtspStreams_listWidget_doubleClicked(const QModelIndex &inde
     std::string tmpStream = index.data(Qt::DisplayRole).toString().toStdString();
     std::string tmpUrl;
 
-    for (const std::pair<std::string, std::string>& pair : stream_to_url_map)
+    for (std::pair<std::string, std::string> pair : stream_to_url_map)
     {
         if (pair.first == tmpStream)
         {
@@ -253,8 +257,8 @@ void MainWindow::on_rtspStreams_listWidget_doubleClicked(const QModelIndex &inde
 
 void MainWindow::on_connectToManager_button_clicked()
 {
-    mNetworkUserWorker.setNetworkIp("127.0.0.1");
-    mNetworkUserWorker.setNetworkPort(9089);
+    mNetworkUserWorker.setNetworkIp(mNetworkUserIp);
+    mNetworkUserWorker.setNetworkPort(mNetworkUserPort);
     try
     {
         mNetworkUserWorker.start();
@@ -270,9 +274,14 @@ void MainWindow::on_connectToManager_button_clicked()
     }
 }
 
-void MainWindow::on_get_streams_button_clicked()
+void MainWindow::on_lineEdit_textEdited(const QString &arg1)
 {
-    // TO DELETE
+    mNetworkUserIp = arg1.toStdString();
+}
+
+void MainWindow::on_lineEdit_returnPressed()
+{
+    MainWindow::on_connectToManager_button_clicked();
 }
 
 void MainWindow::initRtspClient() noexcept(false)

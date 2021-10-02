@@ -39,9 +39,10 @@ public slots:
 private slots:
     void on_pushButton_openStream_clicked();
     void on_pushButton_closeStream_clicked();
-    void on_get_streams_button_clicked();
     void on_rtspStreams_listWidget_doubleClicked(const QModelIndex &index);
     void on_connectToManager_button_clicked();
+    void on_lineEdit_textEdited(const QString &arg1);
+    void on_lineEdit_returnPressed();
 
 private: //methods
     void startRtspStream();
@@ -64,6 +65,8 @@ private: //fields
 
     QImage qt_image;
     StreamingWorker mStreamingWorker;
+    std::string mNetworkUserIp;
+    const uint16_t mNetworkUserPort;
     NetworkUserWorker mNetworkUserWorker;
 
     std::map<std::string, std::string> stream_to_url_map;

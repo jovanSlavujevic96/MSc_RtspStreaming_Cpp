@@ -5,7 +5,6 @@
 #include <mutex>
 #include <vector>
 
-#include "AvH264Writer.h"
 #include "xop/MediaSession.h"
 
 struct OnDemandHandler
@@ -13,6 +12,7 @@ struct OnDemandHandler
 	std::shared_ptr<xop::RtpConnection> connection;
 	bool running;
 	std::thread thread;
+	std::string reading_video;
 };
 
 class OnDemandSession : public xop::MediaSession
@@ -21,13 +21,17 @@ public:
 	OnDemandSession(const std::string& url);
 	~OnDemandSession();
 
+	void setReadingVideo(const std::string& video);
+	const std::string& getReadingvideo() const;
+	size_t getActiveClients();
+	size_t getClientsReadingVideo(const std::string& video);
 	bool AddSource(xop::MediaChannelId channel_id, xop::MediaSource* source) override;
 	bool StartMulticast() override;
-	void bindH264Writer(AvH264Writer* writer);
 	void onDemandLoop(OnDemandHandler* handler);
 private:
-	AvH264Writer* mWriter;
 	std::vector<OnDemandHandler*> mHandler;
-	std::mutex mMutex;
+	std::mutex mRunningMutex;
+	std::mutex mReadingMutex;
+	std::string mReadingVideo;
 	bool mRunning;
 };

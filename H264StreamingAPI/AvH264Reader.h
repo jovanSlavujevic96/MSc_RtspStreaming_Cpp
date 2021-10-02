@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 extern "C"
 {
 #include <libavformat/avformat.h>
@@ -14,10 +16,10 @@ public:
 	AvH264Reader();
 	~AvH264Reader();
 
-	int initReader(const char* fileName);
-	void closeReader();
+	int open(const std::string& file) noexcept;
+	void close() noexcept;
 
-	AVPacket* readPacket(bool* end_of_stream);
+	AVPacket* read(bool* end_of_stream);
 private:
 	AVFormatContext* mInputContext;
 	AVPacket* mAvPacket;

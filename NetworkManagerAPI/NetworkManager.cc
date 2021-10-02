@@ -16,8 +16,13 @@ struct OnDemandStreamInfo
 {
 	std::string stream;
 	std::string url;
-	bool is_busy;
+	std::time_t timestamp;
 };
+
+inline constexpr bool sortOnDemandStreamInfo(const OnDemandStreamInfo* left, const OnDemandStreamInfo* right)
+{
+	return (left->timestamp < right->timestamp);
+}
 
 NetworkManager::NetworkManager(uint16_t port) noexcept :
 	CTcpServer{port}
@@ -91,19 +96,14 @@ unlock:
 	mStreamsInfoMutex.unlock();
 }
 
-void NetworkManager::updateOnDemandStream(const std::string& stream, const std::string& url, bool is_busy)
+void NetworkManager::updateOnDemandStream(const std::string& stream, const std::string& url, std::time_t timestamp)
 {
 	OnDemandStreamInfo* tmp = NULL;
 	mStreamsInfoMutex.lock();
 	for (OnDemandStreamInfo* stream_info : mOnDemandStreams)
 	{
-		if (stream_info->stream == stream)
+		if (stream_info->url == url)
 		{
-			if ( (stream_info->is_busy == is_busy) &&
-				 (url == "" || stream_info->url == url) )
-			{
-				goto unlock;
-			}
 			tmp = stream_info;
 			break;
 		}
@@ -111,15 +111,14 @@ void NetworkManager::updateOnDemandStream(const std::string& stream, const std::
 	if (!tmp)
 	{
 		tmp = new OnDemandStreamInfo;
-		tmp->stream = stream;
 		tmp->url = url;
 		mOnDemandStreams.push_back(tmp);
 	}
-	tmp->is_busy = is_busy;
+	tmp->stream = stream;
+	tmp->timestamp = timestamp;
 
 	NetworkManager::updateStreamMessage();
 	NetworkManager::sendStreamMessage();
-unlock:
 	mStreamsInfoMutex.unlock();
 }
 
@@ -158,12 +157,10 @@ void NetworkManager::updateStreamMessage()
 		mStreamsInfoMessage += stream_info->url + "\r\n";
 	}
 
+	std::sort(mOnDemandStreams.begin(), mOnDemandStreams.end(), ::sortOnDemandStreamInfo);
+
 	for (OnDemandStreamInfo* stream_info : mOnDemandStreams)
 	{
-		if (stream_info->is_busy)
-		{
-			continue;
-		}
 		mStreamsInfoMessage += stream_info->stream + "\r\n";
 		mStreamsInfoMessage += stream_info->url + "\r\n";
 	}

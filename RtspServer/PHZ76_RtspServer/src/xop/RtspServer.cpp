@@ -25,17 +25,21 @@ std::shared_ptr<RtspServer> RtspServer::Create(net::EventLoop* loop)
 
 MediaSessionId RtspServer::AddSession(MediaSession* session)
 {
+    return RtspServer::AddSession(std::shared_ptr<MediaSession>(session));
+}
+
+MediaSessionId RtspServer::AddSession(std::shared_ptr<MediaSession> session)
+{
     std::lock_guard<std::mutex> locker(mutex_);
 
-    if (rtsp_suffix_map_.find(session->GetRtspUrlSuffix()) != rtsp_suffix_map_.end()) 
+    if (rtsp_suffix_map_.find(session->GetRtspUrlSuffix()) != rtsp_suffix_map_.end())
     {
         return 0;
     }
 
-    std::shared_ptr<MediaSession> media_session(session); 
-    MediaSessionId sessionId = media_session->GetMediaSessionId();
-	rtsp_suffix_map_.emplace(std::move(media_session->GetRtspUrlSuffix()), sessionId);
-	media_sessions_.emplace(sessionId, std::move(media_session));
+    MediaSessionId sessionId = session->GetMediaSessionId();
+    rtsp_suffix_map_.emplace(session->GetRtspUrlSuffix(), sessionId);
+    media_sessions_.emplace(sessionId, session);
 
     return sessionId;
 }

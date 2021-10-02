@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "AvH264Reader.h"
 
 AvH264Reader::AvH264Reader()
@@ -11,18 +9,17 @@ AvH264Reader::AvH264Reader()
 
 AvH264Reader::~AvH264Reader()
 {
-	AvH264Reader::closeReader();
+	AvH264Reader::close();
 }
 
-int AvH264Reader::initReader(const char* fileName)
+int AvH264Reader::open(const std::string& file) noexcept
 {
 	int ret;
 
 	// open input file context
-	ret = avformat_open_input(&mInputContext, fileName, NULL, NULL);
+	ret = avformat_open_input(&mInputContext, file.c_str(), NULL, NULL);
 	if (ret < 0)
 	{
-		std::cerr << "fail to avformat_open_input(\"" << fileName << "\"): ret=" << ret << std::endl << std::flush;
 		return 1;
 	}
 
@@ -30,7 +27,6 @@ int AvH264Reader::initReader(const char* fileName)
 	ret = avformat_find_stream_info(mInputContext, NULL);
 	if (ret < 0)
 	{
-		std::cerr << "fail to avformat_find_stream_info: ret=" << ret << std::endl << std::flush;
 		return 2;
 	}
 
@@ -38,7 +34,6 @@ int AvH264Reader::initReader(const char* fileName)
 	ret = av_find_best_stream(mInputContext, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
 	if (ret < 0)
 	{
-		std::cerr << "fail to av_find_best_stream: ret=" << ret << std::endl << std::flush;
 		return 3;
 	}
 	mStreamIndex = ret;
@@ -46,14 +41,13 @@ int AvH264Reader::initReader(const char* fileName)
 	mAvPacket = av_packet_alloc();
 	if (!mAvPacket)
 	{
-		std::cerr << "fail to av_packet_alloc\n" << std::flush;
 		return 4;
 	}
 
 	return 0;
 }
 
-void AvH264Reader::closeReader()
+void AvH264Reader::close() noexcept
 {
 	if (mInputContext)
 	{
@@ -68,13 +62,12 @@ void AvH264Reader::closeReader()
 	}
 }
 
-AVPacket* AvH264Reader::readPacket(bool* end_of_stream)
+AVPacket* AvH264Reader::read(bool* end_of_stream)
 {
 	// read packet from input file
 	int ret = av_read_frame(mInputContext, mAvPacket);
 	if (ret < 0 && ret != AVERROR_EOF)
 	{
-		std::cerr << "fail to av_read_frame: ret=" << ret << std::endl << std::flush;
 		return NULL;
 	}
 	else if (ret == 0 && mAvPacket->stream_index != mStreamIndex)

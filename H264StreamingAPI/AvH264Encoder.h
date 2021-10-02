@@ -17,12 +17,10 @@ class AvH264Encoder
 {
 public:
     explicit AvH264Encoder();
-    AvH264Encoder(const AvH264Encoder& encoder);
     ~AvH264Encoder();
 
-    int open(const AvH264EncConfig& h264_config);
-    int allocNewAvFrame();
-    void close();
+    int open(std::shared_ptr<AvH264EncConfig>h264_config) noexcept;
+    void close() noexcept;
     AVPacket* encode(cv::Mat& mat);
 
 private:

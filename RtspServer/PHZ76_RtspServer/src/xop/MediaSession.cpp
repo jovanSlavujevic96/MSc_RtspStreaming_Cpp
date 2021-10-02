@@ -50,6 +50,16 @@ MediaSession* MediaSession::CreateNew(const char* url_suffix)
 	return new MediaSession(url_suffix);
 }
 
+std::shared_ptr<MediaSession> MediaSession::CreateNewSmart(const std::string& url_suffix)
+{
+	return std::shared_ptr<MediaSession>(MediaSession::CreateNew(url_suffix));
+}
+
+std::shared_ptr<MediaSession> MediaSession::CreateNewSmart(const char* url_suffix)
+{
+	return std::shared_ptr<MediaSession>(MediaSession::CreateNew(url_suffix));
+}
+
 MediaSession::~MediaSession()
 {
 	if (multicast_ip_ != "") 

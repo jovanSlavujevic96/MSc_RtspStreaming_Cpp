@@ -12,7 +12,7 @@
 #include "mainwindow.h"
 #include "streaming_worker.h"
 
-#define MAX_UDP_PAYLOAD_SIZE 0xFFFFu
+#define MAX_SIZE_PROCESSING_FRAME 100000u
 #define MAX_RETRIES 10u
 
 StreamingWorker::StreamingWorker() :
@@ -121,9 +121,10 @@ void StreamingWorker::run()
 	IClient& rtp_client = *mRtpClient;
 	int32_t rcv_bytes;
 	int decode_ret;
-	static uint8_t frame_data[MAX_UDP_PAYLOAD_SIZE];
+	static std::unique_ptr<uint8_t[]> frame_data = std::make_unique<uint8_t[]>(MAX_SIZE_PROCESSING_FRAME);
 	const RtpHeader* rtp_header = mRtpPackage.getRtpHeader();
-	size_t frame_size = 0;
+	const char* rtp_package_wo_header = mRtpPackage.cData() + RTP_HEADER_SIZE;
+	int32_t frame_size = 0;
 	bool display_frame = false;
 	bool first_frame = false;
     uint8_t rtsp_offset;
@@ -161,18 +162,18 @@ void StreamingWorker::run()
 			}
 			display_frame = true;
 		}
-		std::memcpy(
-			frame_data + frame_size,
-			mRtpPackage.cData() + RTP_HEADER_SIZE + rtsp_offset,
-			(size_t)rcv_bytes - RTP_HEADER_SIZE - rtsp_offset
-		);
-		frame_size += (size_t)rcv_bytes - RTP_HEADER_SIZE - rtsp_offset;
+		rcv_bytes -= (RTP_HEADER_SIZE + rtsp_offset);
+		if (frame_size + rcv_bytes >= MAX_SIZE_PROCESSING_FRAME)
+		{
+			goto init;
+		}
+		std::memcpy(frame_data.get() + frame_size, rtp_package_wo_header + rtsp_offset, rcv_bytes);
+		frame_size += rcv_bytes;
 		if (!display_frame)
 		{
 			continue;
 		}
-		mCvFrame = cv::Mat();
-		decode_ret = mDecoder->decode(frame_data, (int)frame_size, mCvFrame);
+		decode_ret = mDecoder->decode(frame_data.get(), frame_size, mCvFrame);
 		if (decode_ret < 0)
         {
             retries--;

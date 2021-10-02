@@ -20,6 +20,7 @@ public:
 	~RtspServer();
 
     MediaSessionId AddSession(MediaSession* session);
+    MediaSessionId AddSession(std::shared_ptr<MediaSession> session);
     void RemoveSession(MediaSessionId sessionId);
 
     bool PushFrame(MediaSessionId sessionId, MediaChannelId channelId, AVFrame& frame);

@@ -22,7 +22,7 @@ public:
 	void stop() noexcept;
 
 	void updateLiveStream(const std::string& stream, const std::string& url);
-	void updateOnDemandStream(const std::string& stream, const std::string& url, bool is_busy);
+	void updateOnDemandStream(const std::string& stream, const std::string& url, std::time_t timestamp);
 private:
 	void threadEntry() override final;
 

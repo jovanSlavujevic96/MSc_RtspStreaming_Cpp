@@ -30,6 +30,9 @@ public:
 
 	static MediaSession* CreateNew(const std::string& url_suffix);
 	static MediaSession* CreateNew(const char* url_suffix="live");
+	static std::shared_ptr<MediaSession> CreateNewSmart(const std::string& url_suffix);
+	static std::shared_ptr<MediaSession> CreateNewSmart(const char* url_suffix);
+
 	virtual ~MediaSession();
 
 	virtual bool AddSource(MediaChannelId channel_id, MediaSource* source);

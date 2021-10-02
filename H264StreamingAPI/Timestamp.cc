@@ -18,14 +18,26 @@ std::string getLongTimestampStr()
 #endif //defined(WIN32) || defined(_WIN32)
 }
 
-std::string getShortTimeStampStr()
+std::string getShortTimestampStr(std::time_t currTimestamp)
 {
-    std::time_t currTimestamp = getTimestamp();
-    struct tm* timeinfo;
+    struct tm* timeinfo = NULL;
+    struct tm* tmp = NULL;
     char buffer[80];
-
-    timeinfo = localtime(&currTimestamp);
-
-    strftime(buffer, 80, "%D_%I:%M%p.", timeinfo);
+#if defined(WIN32) || defined(_WIN32)
+    timeinfo = (struct tm*)std::malloc(sizeof(*timeinfo));
+    if (timeinfo == NULL)
+    {
+        return "";
+    }
+    localtime_s(timeinfo, &currTimestamp);
+    tmp = timeinfo;
+#elif defined(__linux) || defined(__linux__)
+    timeinfo = std::localtime(&currTimestamp);
+#endif //defined(WIN32) || defined(_WIN32)
+    std::strftime(buffer, 80, "%D_%I:%M%p.", timeinfo);
+    if (tmp)
+    {
+        std::free(tmp);
+    }
     return buffer;
 }

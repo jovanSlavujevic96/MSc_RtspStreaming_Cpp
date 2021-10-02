@@ -10,16 +10,16 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/PHZ76_RtspServer/src/3rdpart/md
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/PHZ76_RtspServer/") #3rd party repo
 
-add_library(OnDemand STATIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/OnDemand/OnDemandSession.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/OnDemand/OnDemandSession.cc"
-)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/EnterpriseEmitter/")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/EnterpriseEmitter/")
 
 ###### MSc Project - RTSP Server application
 
-add_executable(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/rtsp_server_main.cc")
+add_executable(${PROJECT_NAME}
+    "${CMAKE_CURRENT_SOURCE_DIR}/rtsp_server_main.cc"
+)
 target_link_libraries(${PROJECT_NAME} PRIVATE PHZ76_RtspServer)
-target_link_libraries(${PROJECT_NAME} PRIVATE OnDemand)
+target_link_libraries(${PROJECT_NAME} PRIVATE EnterpriseEmitter)
 if (UNIX)
     set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,--whole-archive")
 endif ()

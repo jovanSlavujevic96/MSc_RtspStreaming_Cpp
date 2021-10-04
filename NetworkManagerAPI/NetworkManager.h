@@ -10,9 +10,12 @@
 struct OnDemandStreamInfo;
 struct LiveStreamInfo;
 
+class NetworkClientHandler;
+
 class NetworkManager : 
 	public CTcpServer, 
-	public IThread
+	public IThread,
+	public std::enable_shared_from_this<NetworkManager>
 {
 public:
 	NetworkManager(uint16_t port) noexcept;
@@ -21,15 +24,21 @@ public:
 	void start() noexcept(false);
 	void stop() noexcept;
 
-	bool connectSql(const std::string& username, const std::string& password);
+	bool connectSql(const std::string& admin_username, const std::string& admin_password);
+
+	bool insertNewUserSql (const std::string& username, const std::string& email, const std::string& password);
+	bool checkExistanceSql(const std::string& data, std::string type_of_data) noexcept(false);
+	bool checkPasswordSql(const std::string& password, const std::string& data, std::string type_of_data) noexcept(false);
+
+	void sendStreamMessage(NetworkClientHandler* sender) noexcept(false);
 
 	void updateLiveStream(const std::string& stream, const std::string& url);
 	void updateOnDemandStream(const std::string& stream, const std::string& url, std::time_t timestamp);
 private:
 	void threadEntry() override final;
 
-	void updateStreamMessage();
-	void sendStreamMessage();
+	void updateStreamMessage(bool handle_lock);
+	void sendStreamMessage(bool handle_lock);
 
 	std::vector<LiveStreamInfo*> mLiveStreams;
 	std::vector<OnDemandStreamInfo*> mOnDemandStreams;

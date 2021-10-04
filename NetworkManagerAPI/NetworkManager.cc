@@ -1,3 +1,4 @@
+#include <sstream>
 #include <stdexcept>
 #include <algorithm>
 
@@ -36,16 +37,89 @@ public:
 	SqlServer() = default;
 	~SqlServer() = default;
 
-	bool connect(const std::string& username, const std::string& password);
+	bool connect(const char* admin_username, const char* admin_password);
+	bool insertNewUser(const char* username, const char* email, const char* password);
+	bool checkExistance(const char* data, const char* type_of_data) noexcept(false);
+	bool checkPassword(const char* password, const char* data, const char* type_of_data) noexcept(false);
 private:
 	MYSQL* mConnector = NULL;
 };
 
-bool NetworkManager::SqlServer::connect(const std::string& username, const std::string& password)
+bool NetworkManager::SqlServer::connect(const char* admin_username, const char* admin_password)
 {
 	mConnector = mysql_init(NULL);
-	mConnector = mysql_real_connect(mConnector, "localhost", username.c_str(), password.c_str(), "rtsp_network_users", 0, NULL, 0);
+	mConnector = mysql_real_connect(mConnector, "localhost", admin_username, admin_password, "rtsp_network_users", 0, NULL, 0);
 	return (mConnector != NULL);
+}
+
+bool NetworkManager::SqlServer::insertNewUser(const char* username, const char* email, const char* password)
+{
+	int qstate;
+	std::stringstream sql_format_message;
+	std::string sql_message;
+	sql_format_message << "INSERT INTO users(username, email, password) VALUES('" << \
+		username << "','" << email << "','" << password << "')";
+	sql_message = sql_format_message.str();
+	qstate = mysql_query(mConnector, sql_message.c_str());
+	return (!qstate);
+}
+
+bool NetworkManager::SqlServer::checkExistance(const char* data, const char* type_of_data) noexcept(false)
+{
+	if (std::strcmp(type_of_data, "username") && std::strcmp(type_of_data, "email") && std::strcmp(type_of_data, "password"))
+	{
+		throw std::runtime_error(std::string("Bad type of data: ") + type_of_data + ".");
+	}
+	MYSQL_RES* res;
+	MYSQL_ROW row;
+	std::string message = "SELECT " + std::string(type_of_data) + " FROM users";
+	int qstate = mysql_query(mConnector, message.c_str());
+	if (qstate)
+	{
+		throw std::runtime_error("SELECT request has been failed.");
+	}
+	res = mysql_store_result(mConnector);
+	if (NULL == res)
+	{
+		throw std::runtime_error("STORE result has been failed.");
+	}
+	row = mysql_fetch_row(res);
+	while (row)
+	{
+		if (!strcmp(row[0], data))
+		{
+			return true;
+		}
+		row = mysql_fetch_row(res);
+	}
+	return false;
+}
+
+bool NetworkManager::SqlServer::checkPassword(const char* password, const char* data, const char* type_of_data) noexcept(false)
+{
+	if (std::strcmp(type_of_data, "username") && std::strcmp(type_of_data, "email"))
+	{
+		throw std::runtime_error(std::string("Bad type of data: ") + type_of_data + ".");
+	}
+	MYSQL_RES* res;
+	MYSQL_ROW row;
+	std::string message = "SELECT password FROM users WHERE " + std::string(type_of_data) + " = '" + std::string(data) + "'";
+	int qstate = mysql_query(mConnector, message.c_str());
+	if (qstate)
+	{
+		throw std::runtime_error("SELECT request has been failed.");
+	}
+	res = mysql_store_result(mConnector);
+	if (NULL == res)
+	{
+		throw std::runtime_error("STORE result has been failed.");
+	}
+	row = mysql_fetch_row(res);
+	if (!strcmp(row[0], password))
+	{
+		return true;
+	}
+	return false;
 }
 
 NetworkManager::NetworkManager(uint16_t port) noexcept :
@@ -54,7 +128,7 @@ NetworkManager::NetworkManager(uint16_t port) noexcept :
 {
 	CTcpServer::mAllocSocketFunction = [this](SOCKET fd, std::unique_ptr<sockaddr_in> addr) -> std::unique_ptr<CSocket>
 		{ 
-			return std::make_unique<NetworkClientHandler>(fd, std::move(addr)); 
+			return std::make_unique<NetworkClientHandler>(fd, std::move(addr), shared_from_this());
 		};
 }
 
@@ -97,9 +171,31 @@ void NetworkManager::stop() noexcept
 	IThread::join();
 }
 
-bool NetworkManager::connectSql(const std::string& username, const std::string& password)
+bool NetworkManager::connectSql(const std::string& admin_username, const std::string& admin_password)
 {
-	return mSqlServer->connect(username, password);
+	return mSqlServer->connect(admin_username.c_str(), admin_password.c_str());
+}
+
+bool NetworkManager::insertNewUserSql(const std::string& username, const std::string& email, const std::string& password)
+{
+	return mSqlServer->insertNewUser(username.c_str(), email.c_str(), password.c_str());
+}
+
+bool NetworkManager::checkExistanceSql(const std::string& data, std::string type_of_data) noexcept(false)
+{
+	return mSqlServer->checkExistance(data.c_str(), type_of_data.c_str());
+}
+
+bool NetworkManager::checkPasswordSql(const std::string& password, const std::string& data, std::string type_of_data) noexcept(false)
+{
+	return mSqlServer->checkPassword(password.c_str(), data.c_str(), type_of_data.c_str());
+}
+
+void NetworkManager::sendStreamMessage(NetworkClientHandler* sender) noexcept(false)
+{
+	mStreamsInfoMutex.lock();
+	*sender << mStreamsInfoMessage;
+	mStreamsInfoMutex.unlock();
 }
 
 void NetworkManager::updateLiveStream(const std::string& stream, const std::string& url)
@@ -120,8 +216,8 @@ void NetworkManager::updateLiveStream(const std::string& stream, const std::stri
 	}
 	mLiveStreams.push_back(new LiveStreamInfo{ stream, url });
 
-	NetworkManager::updateStreamMessage();
-	NetworkManager::sendStreamMessage();
+	NetworkManager::updateStreamMessage(false /*handle_lock*/);
+	NetworkManager::sendStreamMessage(false /*handle_lock*/);
 unlock:
 	mStreamsInfoMutex.unlock();
 }
@@ -147,8 +243,8 @@ void NetworkManager::updateOnDemandStream(const std::string& stream, const std::
 	tmp->stream = stream;
 	tmp->timestamp = timestamp;
 
-	NetworkManager::updateStreamMessage();
-	NetworkManager::sendStreamMessage();
+	NetworkManager::updateStreamMessage(false /*handle_lock*/);
+	NetworkManager::sendStreamMessage(false /*handle_lock*/);
 	mStreamsInfoMutex.unlock();
 }
 
@@ -165,9 +261,6 @@ void NetworkManager::threadEntry()
 			if (network_client)
 			{
 				network_client->start();
-
-				std::lock_guard<std::recursive_mutex> guard(mStreamsInfoMutex);
-				*network_client << mStreamsInfoMessage;
 			}
 		}
 		catch (const CSocketException&)
@@ -177,8 +270,12 @@ void NetworkManager::threadEntry()
 	}
 }
 
-void NetworkManager::updateStreamMessage()
+void NetworkManager::updateStreamMessage(bool handle_lock)
 {
+	if (handle_lock)
+	{
+		mStreamsInfoMutex.lock();
+	}
 	mStreamsInfoMessage = "CMD:STREAM_LIST\r\n";
 
 	for (LiveStreamInfo* stream_info : mLiveStreams)
@@ -195,19 +292,37 @@ void NetworkManager::updateStreamMessage()
 		mStreamsInfoMessage += stream_info->url + "\r\n";
 	}
 	mStreamsInfoMessage += "\r\n";
+	if (handle_lock)
+	{
+		mStreamsInfoMutex.unlock();
+	}
 }
 
-void NetworkManager::sendStreamMessage()
+void NetworkManager::sendStreamMessage(bool handle_lock)
 {
+	if (handle_lock)
+	{
+		mStreamsInfoMutex.lock();
+	}
+	NetworkClientHandler* handler;
 	for (const std::unique_ptr<CSocket>& sender : CTcpServer::mClientSockets)
 	{
+		handler = (NetworkClientHandler*)sender.get();
+		if (!handler || !handler->gotAccess())
+		{
+			continue;
+		}
 		try
 		{
 			*sender.get() << mStreamsInfoMessage;
 		}
 		catch (...)
 		{
-			continue;
+
 		}
+	}
+	if (handle_lock)
+	{
+		mStreamsInfoMutex.unlock();
 	}
 }

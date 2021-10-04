@@ -12,6 +12,7 @@
 #include "rtsp_method_enum.h"
 #include "streaming_worker.h"
 #include "network_user_worker.h"
+#include "signindialog.h"
 
 class CTcpClient;
 class NetworkUser;
@@ -68,6 +69,7 @@ private: //fields
     std::string mNetworkUserIp;
     const uint16_t mNetworkUserPort;
     NetworkUserWorker mNetworkUserWorker;
+    SignInDialog mSignInDialog;
 
     std::map<std::string, std::string> stream_to_url_map;
 

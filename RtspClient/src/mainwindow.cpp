@@ -8,6 +8,7 @@
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "signindialog.h"
 
 #include <QLineEdit>
 #include <QMessageBox>
@@ -32,8 +33,9 @@ static bool parseRtspResponseFirstTwoLines(const char* line1, const char* line2,
 MainWindow::MainWindow(QWidget* parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
+    mNetworkUserIp{LOCALHOST},
     mNetworkUserPort{NETWORK_MANAGER_PORT},
-    mNetworkUserIp{LOCALHOST}
+    mSignInDialog{&mNetworkUserWorker, this}
 {
     ui->setupUi(this);
 
@@ -257,21 +259,25 @@ void MainWindow::on_rtspStreams_listWidget_doubleClicked(const QModelIndex &inde
 
 void MainWindow::on_connectToManager_button_clicked()
 {
+    if (mNetworkUserWorker.isRunning())
+    {
+        displayInfo("Connect Manager", "Already connected to manager");
+        return;
+    }
     mNetworkUserWorker.setNetworkIp(mNetworkUserIp);
     mNetworkUserWorker.setNetworkPort(mNetworkUserPort);
     try
     {
-        mNetworkUserWorker.start();
-        displayInfo("Connect To Manager", "Successfully connected to manager");
+        mNetworkUserWorker.initNetworkUser();
     }
     catch (const CSocketException& e)
     {
         displayError("Error on Network User connection", e.what());
+        mNetworkUserWorker.deinitNetworkUser();
+        return;
     }
-    catch (const std::exception& e)
-    {
-        displayError("Error on Network User startup", e.what());
-    }
+    mSignInDialog.setModal(true);
+    mSignInDialog.show();
 }
 
 void MainWindow::on_lineEdit_textEdited(const QString &arg1)

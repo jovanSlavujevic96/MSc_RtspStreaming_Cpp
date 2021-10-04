@@ -9,14 +9,7 @@
 #define RESP_OK "RESP:OK\r\n"
 #define RESP_ERR "RESP:ERR\r\n"
 
-static inline constexpr uint16_t strLen(const char* str)
-{
-	uint16_t i = 0;
-	for (; str[i] != '\0'; ++i);
-	return i;
-}
-
-static constexpr uint16_t cCmdStreamListLen = ::strLen(CMD_STREAM_LIST);
+static const uint16_t cCmdStreamListLen = std::strlen(CMD_STREAM_LIST);
 
 static inline void SetStreamsAndUrls(const char* str, std::vector<std::string>& streams, std::vector<std::string>& urls) noexcept(false)
 {

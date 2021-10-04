@@ -1,3 +1,5 @@
+#include <sstream>
+
 #include "network_user_worker.h"
 
 NetworkUserWorker::NetworkUserWorker() :
@@ -16,20 +18,9 @@ NetworkUserWorker::~NetworkUserWorker()
 
 void NetworkUserWorker::start() noexcept(false)
 {
-// init Network User
-	try
-	{
-		NetworkUserWorker::initNetworkUser();
-	}
-	catch (...)
-	{
-		throw;
-	}
-
 // start thread
 	if (QThread::isRunning())
 	{
-		emit dropInfo("Information", "RTSP Streaming Client is already running.");
 		return;
 	}
 	QThread::setTerminationEnabled(true);
@@ -55,6 +46,39 @@ void NetworkUserWorker::stop(bool drop_info) noexcept
 		delete mUser;
 		mUser = NULL;
 	}
+}
+
+void NetworkUserWorker::signIn(const std::string& username_email, const std::string& password) noexcept(false)
+{
+    std::stringstream ss;
+    ss << "LOGIN_USER\r\n" << "USERNAME=" << username_email << "\r\n" << "PASSWORD=" << password << "\r\n\r\n";
+    try
+    {
+        *mUser << ss.str();
+    }
+    catch (const std::exception& e)
+    {
+        emit dropError("Network User send failed", e.what());
+        return;
+    }
+    try
+    {
+        mUser->receiveMessage();
+    }
+    catch (const CSocketException& e)
+    {
+        emit dropError("Network User receive failed", e.what());
+    }
+    catch (const std::runtime_error& e)
+    {
+        emit dropError("Network User sign in failed", e.what());
+    }
+}
+
+void NetworkUserWorker::askForList() noexcept(false)
+{
+    const std::string get_streams_message = "GET_STREAMS\r\n";
+    *mUser << get_streams_message;
 }
 
 void NetworkUserWorker::run()
@@ -87,9 +111,21 @@ void NetworkUserWorker::run()
 
 void NetworkUserWorker::initNetworkUser() noexcept(false)
 {
-	if (!mUser)
+	if (mUser)
 	{
-		mUser = new NetworkUser(mNetworkIp.c_str(), mNetrowkPort);
+		emit dropInfo("Connect", "You are already connected to Network Manager.");
+		return;
 	}
+	mUser = new NetworkUser(mNetworkIp.c_str(), mNetrowkPort);
 	mUser->initClient();
+}
+
+void NetworkUserWorker::deinitNetworkUser()
+{
+    if (!mUser)
+    {
+        return;
+    }
+    delete mUser;
+    mUser = NULL;
 }

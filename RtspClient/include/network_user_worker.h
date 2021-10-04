@@ -16,8 +16,13 @@ public:
     explicit NetworkUserWorker();
     ~NetworkUserWorker();
 
+    void initNetworkUser() noexcept(false);
+    void deinitNetworkUser();
     void start() noexcept(false);
     void stop(bool drop_info) noexcept;
+
+    void signIn(const std::string& username_email, const std::string& password) noexcept(false);
+    void askForList() noexcept(false);
 
 //setters
     inline void setNetworkIp(const std::string& ip) { mNetworkIp = ip; }
@@ -35,5 +40,4 @@ signals:
 
 private: //methods
     void run() override final;
-    void initNetworkUser() noexcept(false);
 };

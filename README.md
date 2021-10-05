@@ -9,7 +9,7 @@
 * Implemented saving of cv::Mat camera capturing into H264 video on RTSP Server
 * Implemented P2P (PeerToPeer) RTSP Server for sending "OnDemand" saved H264 videos
 * Imported SQL Server C++ 3rd party library and created SQL Users Database
+* Implemented Sign up/in of RTSP Client on SQL Database of RTSP Server
 
 #### TO DO:
-* Implement Sign up/in of RTSP Client on SQL Database of RTSP Server
 * Implement SQL Database User data encryption

@@ -19,6 +19,7 @@ private:
 	void threadEntry() override;
 	void parseMessage(const char* msg) noexcept(false);
 
+	void parseRegisterMessage(const char* end_line) noexcept(false);
 	void parseLoginMessage(const char* end_line) noexcept(false);
 
 	enum class eNetworkClientStatus;

@@ -10,7 +10,7 @@ class NetworkUserWorker : public QThread
 
 private: //fields
     std::string mNetworkIp;
-    uint16_t mNetrowkPort;
+    uint16_t mNetworkPort;
     NetworkUser* mUser;
 public:
     explicit NetworkUserWorker();
@@ -21,16 +21,17 @@ public:
     void start() noexcept(false);
     void stop(bool drop_info) noexcept;
 
+    void signUp(const std::string& username, const std::string& email, const std::string& password) noexcept(false);
     void signIn(const std::string& username_email, const std::string& password) noexcept(false);
     void askForList() noexcept(false);
 
 //setters
     inline void setNetworkIp(const std::string& ip) { mNetworkIp = ip; }
-    inline void setNetworkPort(uint16_t port) { mNetrowkPort = port; }
+    inline void setNetworkPort(uint16_t port) { mNetworkPort = port; }
 
 //getters
     constexpr inline const std::string& getNetworkIp() const { return mNetworkIp; }
-    constexpr inline uint16_t getNetworkPort() const { return mNetrowkPort; }
+    constexpr inline uint16_t getNetworkPort() const { return mNetworkPort; }
 
 signals:
     void dropLists(std::vector<std::string> streams, std::vector<std::string> urls);

@@ -11,6 +11,9 @@
 #define PASSWORD_LINE "PASSWORD="
 #define PASSWORD_LINE_LEN 9u
 
+#define EMAIL_LINE "EMAIL="
+#define EMAIL_LINE_LEN 6u
+
 #define REPLY_OK  "RESP:OK\r\n"
 #define REPLY_ERR "RESP:ERR\r\n"
 
@@ -137,6 +140,7 @@ processing:
 	{
 		case eNetworkClientStatus::REGISTER_USER:
 		{
+			NetworkClientHandler::parseRegisterMessage(end_line_1);
 			break;
 		}
 		case eNetworkClientStatus::LOGIN_USER:
@@ -146,6 +150,47 @@ processing:
 		}
 		default:
 			break;
+	}
+}
+
+void NetworkClientHandler::parseRegisterMessage(const char* end_line) noexcept(false)
+{
+	const char* end_line_2 = std::strstr(end_line + 2, "\r\n");
+	const char* username_line_2 = std::strstr(end_line + 2, USERNAME_LINE);
+	if (!end_line_2 || !username_line_2)
+	{
+		throw std::runtime_error("Bad message format.");
+	}
+	const std::string username(username_line_2 + USERNAME_LINE_LEN, end_line_2);
+	bool ret;
+	ret = mManager->checkExistanceSql(username.c_str(), "username");
+	if (ret)
+	{
+		throw std::runtime_error(username + " already exists in database.");
+	}
+	const char* end_line_3 = std::strstr(end_line_2 + 2, "\r\n");
+	const char* email_line_3 = std::strstr(end_line_2 + 2, EMAIL_LINE);
+	if (!end_line_3 || !email_line_3)
+	{
+		throw std::runtime_error("Bad message format.");
+	}
+	const std::string email(email_line_3 + EMAIL_LINE_LEN, end_line_3);
+	ret = mManager->checkExistanceSql(email.c_str(), "email");
+	if (ret)
+	{
+		throw std::runtime_error(username + " already exists in database.");
+	}
+	const char* end_line_4 = std::strstr(end_line_3 + 2, "\r\n");
+	const char* password_line_4 = std::strstr(end_line_3 + 2, PASSWORD_LINE);
+	if (!end_line_4 || !password_line_4)
+	{
+		throw std::runtime_error("Bad message format.");
+	}
+	const std::string password(password_line_4 + PASSWORD_LINE_LEN, end_line_4);
+	ret = mManager->insertNewUserSql(username, email, password);
+	if (!ret)
+	{
+		throw std::runtime_error("Failed to insert new user in database.");
 	}
 }
 
@@ -160,14 +205,7 @@ void NetworkClientHandler::parseLoginMessage(const char* end_line)  noexcept(fal
 	const std::string username(username_line_2 + USERNAME_LINE_LEN, end_line_2);
 	bool ret;
 	const char* type_of_data = std::strstr(username.c_str(), "@") ? "email" : "username";
-	try
-	{
-		ret = mManager->checkExistanceSql(username.c_str(), type_of_data);
-	}
-	catch (...)
-	{
-		throw;
-	}
+	ret = mManager->checkExistanceSql(username.c_str(), type_of_data);
 	if (!ret)
 	{
 		throw std::runtime_error("Failed to find " + username + " in database.");
@@ -179,14 +217,7 @@ void NetworkClientHandler::parseLoginMessage(const char* end_line)  noexcept(fal
 		throw std::runtime_error("Bad message format.");
 	}
 	const std::string password(password_line_3 + PASSWORD_LINE_LEN, end_line_3);
-	try
-	{
-		ret = mManager->checkPasswordSql(password.c_str(), username.c_str(), type_of_data);
-	}
-	catch (...)
-	{
-		throw;
-	}
+	ret = mManager->checkPasswordSql(password.c_str(), username.c_str(), type_of_data);
 	if (!ret)
 	{
 		throw std::runtime_error("Bad password.");

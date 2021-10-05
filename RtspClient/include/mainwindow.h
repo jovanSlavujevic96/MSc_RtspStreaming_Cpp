@@ -12,7 +12,6 @@
 #include "rtsp_method_enum.h"
 #include "streaming_worker.h"
 #include "network_user_worker.h"
-#include "signindialog.h"
 
 class CTcpClient;
 class NetworkUser;
@@ -29,6 +28,9 @@ class MainWindow :
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
+
+    void displaySignInWindow();
+    void displaySignUpWindow();
 
 public slots:
     void displayFrame(cv::Mat frame_mat);
@@ -69,7 +71,6 @@ private: //fields
     std::string mNetworkUserIp;
     const uint16_t mNetworkUserPort;
     NetworkUserWorker mNetworkUserWorker;
-    SignInDialog mSignInDialog;
 
     std::map<std::string, std::string> stream_to_url_map;
 

@@ -9,6 +9,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "signindialog.h"
+#include "signupdialog.h"
 
 #include <QLineEdit>
 #include <QMessageBox>
@@ -34,8 +35,7 @@ MainWindow::MainWindow(QWidget* parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     mNetworkUserIp{LOCALHOST},
-    mNetworkUserPort{NETWORK_MANAGER_PORT},
-    mSignInDialog{&mNetworkUserWorker, this}
+    mNetworkUserPort{NETWORK_MANAGER_PORT}
 {
     ui->setupUi(this);
 
@@ -70,6 +70,20 @@ MainWindow::~MainWindow()
         delete rtsp_client;
     }
     delete ui;
+}
+
+void MainWindow::displaySignInWindow()
+{
+    SignInDialog sign_in_dialog(&mNetworkUserWorker, this);
+    sign_in_dialog.show();
+    sign_in_dialog.exec();
+}
+
+void MainWindow::displaySignUpWindow()
+{
+    SignUpDialog sign_up_dialog(&mNetworkUserWorker, this);
+    sign_up_dialog.show();
+    sign_up_dialog.exec();
 }
 
 void MainWindow::startRtspStream()
@@ -259,25 +273,22 @@ void MainWindow::on_rtspStreams_listWidget_doubleClicked(const QModelIndex &inde
 
 void MainWindow::on_connectToManager_button_clicked()
 {
-    if (mNetworkUserWorker.isRunning())
+    if (!mNetworkUserWorker.isRunning())
     {
-        displayInfo("Connect Manager", "Already connected to manager");
-        return;
+        mNetworkUserWorker.setNetworkIp(mNetworkUserIp);
+        mNetworkUserWorker.setNetworkPort(mNetworkUserPort);
+        try
+        {
+            mNetworkUserWorker.initNetworkUser();
+        }
+        catch (const CSocketException& e)
+        {
+            displayError("Error on Network User connection", e.what());
+            mNetworkUserWorker.deinitNetworkUser();
+            return;
+        }
     }
-    mNetworkUserWorker.setNetworkIp(mNetworkUserIp);
-    mNetworkUserWorker.setNetworkPort(mNetworkUserPort);
-    try
-    {
-        mNetworkUserWorker.initNetworkUser();
-    }
-    catch (const CSocketException& e)
-    {
-        displayError("Error on Network User connection", e.what());
-        mNetworkUserWorker.deinitNetworkUser();
-        return;
-    }
-    mSignInDialog.setModal(true);
-    mSignInDialog.show();
+    MainWindow::displaySignInWindow();
 }
 
 void MainWindow::on_lineEdit_textEdited(const QString &arg1)

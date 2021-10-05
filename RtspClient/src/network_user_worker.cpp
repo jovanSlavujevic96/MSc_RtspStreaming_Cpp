@@ -3,6 +3,8 @@
 #include "network_user_worker.h"
 
 NetworkUserWorker::NetworkUserWorker() :
+	mNetworkPort{ 0 },
+	mNetworkIp{""},
 	mUser{NULL}
 {
 
@@ -48,31 +50,22 @@ void NetworkUserWorker::stop(bool drop_info) noexcept
 	}
 }
 
+void NetworkUserWorker::signUp(const std::string& username, const std::string& email, const std::string& password) noexcept(false)
+{
+    std::stringstream ss;
+    ss << "REGISTER_USER\r\n" << "USERNAME=" << username << "\r\n" << "EMAIL=" << email << "\r\n" << "PASSWORD=" << password << "\r\n\r\n";
+
+    *mUser << ss.str();
+    mUser->receiveMessage();
+}
+
 void NetworkUserWorker::signIn(const std::string& username_email, const std::string& password) noexcept(false)
 {
     std::stringstream ss;
     ss << "LOGIN_USER\r\n" << "USERNAME=" << username_email << "\r\n" << "PASSWORD=" << password << "\r\n\r\n";
-    try
-    {
-        *mUser << ss.str();
-    }
-    catch (const std::exception& e)
-    {
-        emit dropError("Network User send failed", e.what());
-        return;
-    }
-    try
-    {
-        mUser->receiveMessage();
-    }
-    catch (const CSocketException& e)
-    {
-        emit dropError("Network User receive failed", e.what());
-    }
-    catch (const std::runtime_error& e)
-    {
-        emit dropError("Network User sign in failed", e.what());
-    }
+
+    *mUser << ss.str();
+    mUser->receiveMessage();
 }
 
 void NetworkUserWorker::askForList() noexcept(false)
@@ -113,10 +106,9 @@ void NetworkUserWorker::initNetworkUser() noexcept(false)
 {
 	if (mUser)
 	{
-		emit dropInfo("Connect", "You are already connected to Network Manager.");
 		return;
 	}
-	mUser = new NetworkUser(mNetworkIp.c_str(), mNetrowkPort);
+	mUser = new NetworkUser(mNetworkIp.c_str(), mNetworkPort);
 	mUser->initClient();
 }
 

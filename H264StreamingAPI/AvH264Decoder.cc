@@ -94,7 +94,6 @@ int AvH264Decoder::decode(uint8_t* pDataIn, int nInSize, cv::Mat& res)
         }
         else if (ret < 0)
         {
-            std::cerr << "avcodec_send_packet failed\n";
             return -2;
         }
 

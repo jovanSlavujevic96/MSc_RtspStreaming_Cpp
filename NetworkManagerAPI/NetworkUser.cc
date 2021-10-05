@@ -9,7 +9,7 @@
 #define RESP_OK "RESP:OK\r\n"
 #define RESP_ERR "RESP:ERR\r\n"
 
-static const uint16_t cCmdStreamListLen = std::strlen(CMD_STREAM_LIST);
+static const size_t cCmdStreamListLen = std::strlen(CMD_STREAM_LIST);
 
 static inline void SetStreamsAndUrls(const char* str, std::vector<std::string>& streams, std::vector<std::string>& urls) noexcept(false)
 {

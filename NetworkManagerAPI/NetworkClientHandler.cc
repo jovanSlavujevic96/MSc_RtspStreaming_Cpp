@@ -1,9 +1,11 @@
 #include <sstream>
 #include <cstring>
 
-#include "NetworkManager.h"
-#include "NetworkClientHandler.h"
 #include "StringPackage.h"
+#include "NetworkManager.h"
+#include "NetworkEncryptor.h"
+#include "NetworkDecryptor.h"
+#include "NetworkClientHandler.h"
 
 #define USERNAME_LINE "USERNAME="
 #define USERNAME_LINE_LEN 9u
@@ -40,7 +42,9 @@ NetworkClientHandler::NetworkClientHandler(SOCKET sock_fd, std::unique_ptr<socka
 	IWorkerSocket{sock_fd, std::move(sock_addr)},
 	mClientStatus{ eNetworkClientStatus::NONE },
 	mManager{ manager },
-	mGotAccess{ false }
+	mGotAccess{ false },
+	mEncryptor{ new NetworkEncryptor },
+	mDecryptor{ new NetworkDecryptor }
 {
 
 }
@@ -74,16 +78,27 @@ bool NetworkClientHandler::gotAccess() const
 	return mGotAccess;
 }
 
+void NetworkClientHandler::sendMessage(const std::string& message) noexcept(false)
+{
+	std::string encrypted_message;
+	mEncryptor->encryptText(message, encrypted_message);
+	*this << encrypted_message;
+}
+
 void NetworkClientHandler::threadEntry()
 {
 	NetworkClientHandler& this_ = *this;
 	StringPackage rcvPkg(MESSAGE_LEN);
 	std::string sndPkg;
+	std::string decryptedMessage;
+	size_t ret;
 	while (true)
 	{
+		decryptedMessage.clear();
 		try
 		{
-			this_ >> &rcvPkg;
+			ret = this_ >> &rcvPkg;
+			mDecryptor->decryptText(rcvPkg.cData(), ret, decryptedMessage);
 		}
 		catch (...)
 		{
@@ -91,7 +106,7 @@ void NetworkClientHandler::threadEntry()
 		}
 		try
 		{
-			NetworkClientHandler::parseMessage(rcvPkg.cData());
+			NetworkClientHandler::parseMessage(decryptedMessage.c_str());
 			sndPkg = REPLY_OK;
 			mGotAccess = true;
 		}
@@ -108,7 +123,7 @@ void NetworkClientHandler::threadEntry()
 			}
 			else
 			{
-				this_ << sndPkg;
+				this->sendMessage(sndPkg);
 			}
 		}
 		catch (...)

@@ -41,7 +41,6 @@ void SignInDialog::on_password_line_edit_textEdited(const QString &arg1)
     password = arg1.toStdString();
 }
 
-
 void SignInDialog::on_username_email_line_edit_returnPressed()
 {
     SignInDialog::on_sign_in_push_button_clicked();

@@ -52,26 +52,19 @@ void NetworkUserWorker::stop(bool drop_info) noexcept
 
 void NetworkUserWorker::signUp(const std::string& username, const std::string& email, const std::string& password) noexcept(false)
 {
-    std::stringstream ss;
-    ss << "REGISTER_USER\r\n" << "USERNAME=" << username << "\r\n" << "EMAIL=" << email << "\r\n" << "PASSWORD=" << password << "\r\n\r\n";
-
-    *mUser << ss.str();
-    mUser->receiveMessage();
+	mUser->signUpRequest(username, email, password);
+	mUser->receiveMessage();
 }
 
 void NetworkUserWorker::signIn(const std::string& username_email, const std::string& password) noexcept(false)
 {
-    std::stringstream ss;
-    ss << "LOGIN_USER\r\n" << "USERNAME=" << username_email << "\r\n" << "PASSWORD=" << password << "\r\n\r\n";
-
-    *mUser << ss.str();
-    mUser->receiveMessage();
+	mUser->signInRequest(username_email, password);
+	mUser->receiveMessage();
 }
 
 void NetworkUserWorker::askForList() noexcept(false)
 {
-    const std::string get_streams_message = "GET_STREAMS\r\n";
-    *mUser << get_streams_message;
+	mUser->getStreamsReqest();
 }
 
 void NetworkUserWorker::run()

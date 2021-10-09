@@ -194,7 +194,7 @@ bool NetworkManager::checkPasswordSql(const std::string& password, const std::st
 void NetworkManager::sendStreamMessage(NetworkClientHandler* sender) noexcept(false)
 {
 	mStreamsInfoMutex.lock();
-	*sender << mStreamsInfoMessage;
+	sender->sendMessage(mStreamsInfoMessage);
 	mStreamsInfoMutex.unlock();
 }
 
@@ -314,7 +314,7 @@ void NetworkManager::sendStreamMessage(bool handle_lock)
 		}
 		try
 		{
-			*sender.get() << mStreamsInfoMessage;
+			handler->sendMessage(mStreamsInfoMessage);
 		}
 		catch (...)
 		{

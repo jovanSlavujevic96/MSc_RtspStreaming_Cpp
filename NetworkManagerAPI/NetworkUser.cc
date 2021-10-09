@@ -1,3 +1,7 @@
+#include <sstream>
+
+#include "NetworkEncryptor.h"
+#include "NetworkDecryptor.h"
 #include "NetworkUser.h"
 
 #define MAX_MESSAGE_LEN 2048u //2kb
@@ -47,32 +51,69 @@ static inline void SetStreamsAndUrls(const char* str, std::vector<std::string>& 
 NetworkUser::NetworkUser(const char* manager_ip, uint16_t manager_port) :
 	CTcpClient{manager_ip, manager_port},
 	mRcvPkg{ MAX_MESSAGE_LEN },
-	mGotStreams{false}
+	mGotStreams{ false },
+	mEncryptor{ new NetworkEncryptor },
+	mDecryptor{ new NetworkDecryptor }
 {
 
 }
 
-void NetworkUser::sendMessage(const std::string& msg) noexcept(false)
+void NetworkUser::sendRequest(const std::string& message) noexcept(false)
 {
-	*this << msg;
+	std::string output;
+	mEncryptor->encryptText(message, output);
+	*this << output;
+}
+
+void NetworkUser::getStreamsReqest() noexcept(false)
+{
+	const std::string get_streams_message = "GET_STREAMS\r\n\r\n";
+	NetworkUser::sendRequest(get_streams_message);
+}
+
+void NetworkUser::signUpRequest(const std::string& username, const std::string& email, const std::string& password) noexcept(false)
+{
+	std::string sending_message;
+	{
+		std::stringstream signup_user_stream;
+		signup_user_stream << "REGISTER_USER\r\n" << "USERNAME=" << username << "\r\n" << "EMAIL=" << email << "\r\n" << "PASSWORD=" << password << "\r\n\r\n";
+		sending_message = signup_user_stream.str();
+	}
+	NetworkUser::sendRequest(sending_message);
+}
+
+void NetworkUser::signInRequest(const std::string& username_email, const std::string& password) noexcept(false)
+{
+	std::string sending_message;
+	{
+		std::stringstream signin_user_stream;
+		signin_user_stream << "LOGIN_USER\r\n" << "USERNAME=" << username_email << "\r\n" << "PASSWORD=" << password << "\r\n\r\n";
+		sending_message = signin_user_stream.str();
+	}
+	NetworkUser::sendRequest(sending_message);
 }
 
 void NetworkUser::receiveMessage() noexcept(false)
 {
-	*this >> &mRcvPkg;
+	std::string decryptedMessage;
+	const char* ptr = NULL;
+	int32_t ret = *this >> &mRcvPkg;
 
-	if (std::strstr(mRcvPkg.cData(), CMD_PREFFIX_WORD))
+	mDecryptor->decryptText(mRcvPkg.cData(), ret, decryptedMessage);
+	ptr = decryptedMessage.c_str();
+
+	if (std::strstr(ptr, CMD_PREFFIX_WORD))
 	{
-		if (std::strstr(mRcvPkg.cData(), CMD_STREAM_LIST))
+		if (std::strstr(ptr, CMD_STREAM_LIST))
 		{
-			const char*  iterator = mRcvPkg.cData() + cCmdStreamListLen;
+			const char*  iterator = ptr + cCmdStreamListLen;
 			::SetStreamsAndUrls(iterator, mStreams, mUrls);
 			mGotStreams = true;
 		}
 	}
-	else if (std::strstr(mRcvPkg.cData(), RESP_PREFFIX_WORD))
+	else if (std::strstr(ptr, RESP_PREFFIX_WORD))
 	{
-		if (!std::strstr(mRcvPkg.cData(), RESP_OK))
+		if (!std::strstr(ptr, RESP_OK))
 		{
 			throw std::runtime_error("Bad message format. RESP message is not OK.");
 		}

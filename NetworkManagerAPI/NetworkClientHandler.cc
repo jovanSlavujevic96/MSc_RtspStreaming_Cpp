@@ -43,6 +43,7 @@ NetworkClientHandler::NetworkClientHandler(SOCKET sock_fd, std::unique_ptr<socka
 	mClientStatus{ eNetworkClientStatus::NONE },
 	mManager{ manager },
 	mGotAccess{ false },
+	mIsAlive{ true },
 	mEncryptor{ new NetworkEncryptor },
 	mDecryptor{ new NetworkDecryptor }
 {
@@ -76,6 +77,11 @@ void NetworkClientHandler::stop() noexcept
 bool NetworkClientHandler::gotAccess() const
 {
 	return mGotAccess;
+}
+
+bool NetworkClientHandler::isAlive() const
+{
+	return mIsAlive;
 }
 
 void NetworkClientHandler::sendMessage(const std::string& message) noexcept(false)
@@ -131,6 +137,8 @@ void NetworkClientHandler::threadEntry()
 			break;
 		}
 	}
+	mIsAlive = false;
+	mManager->clearJunk();
 }
 
 void NetworkClientHandler::parseMessage(const char* msg) noexcept(false)

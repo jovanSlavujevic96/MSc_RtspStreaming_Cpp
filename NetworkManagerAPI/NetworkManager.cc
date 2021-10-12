@@ -122,9 +122,91 @@ bool NetworkManager::SqlServer::checkPassword(const char* password, const char* 
 	return false;
 }
 
+class NetworkManager::JunkCleaner : public IThread
+{
+public:
+	JunkCleaner(std::vector<std::unique_ptr<CSocket>>& clients, std::recursive_mutex& clients_mutex);
+	~JunkCleaner();
+
+	void stop();
+	void clearJunk();
+private:
+	void threadEntry() override final;
+
+	std::vector<std::unique_ptr<CSocket>>& mNetworkManagerClients;
+	std::recursive_mutex& mNetworkManagerClientsMutex;
+
+	std::atomic<bool> mRunning;
+	bool mClear;
+	std::mutex mRunningMutex;
+	std::condition_variable mCondition;
+};
+
+NetworkManager::JunkCleaner::JunkCleaner(std::vector<std::unique_ptr<CSocket>>& clients, std::recursive_mutex& clients_mutex) :
+	mNetworkManagerClients{ clients },
+	mNetworkManagerClientsMutex{ clients_mutex },
+	mRunning{ true },
+	mClear{ false }
+{
+
+}
+
+NetworkManager::JunkCleaner::~JunkCleaner() = default;
+
+void NetworkManager::JunkCleaner::stop()
+{
+	mRunningMutex.lock();
+	mRunning = false;
+	mRunningMutex.unlock();
+	mCondition.notify_one();
+	IThread::join();
+}
+
+void NetworkManager::JunkCleaner::clearJunk()
+{
+	mClear = true;
+	mCondition.notify_one();
+}
+
+void NetworkManager::JunkCleaner::threadEntry()
+{
+	std::mutex entry_mutex;
+	std::unique_lock<std::mutex> unique_guard(entry_mutex);
+	std::vector<size_t> indexes;
+	constexpr std::chrono::duration duration = std::chrono::seconds(1);
+	while (true)
+	{
+		{
+			std::lock_guard<std::mutex> guard(mRunningMutex);
+			if (!mRunning)
+			{
+				break;
+			}
+		}
+		indexes.clear();
+		for (size_t i = 0; i < mNetworkManagerClients.size(); i++)
+		{
+			NetworkClientHandler* network_client = dynamic_cast<NetworkClientHandler*>(mNetworkManagerClients[i].get());
+			if (network_client && !network_client->isAlive())
+			{
+				indexes.push_back(i);
+			}
+		}
+		mNetworkManagerClientsMutex.lock();
+		for (size_t index : indexes)
+		{
+			mNetworkManagerClients.erase(mNetworkManagerClients.begin() + index);
+		}
+		mNetworkManagerClientsMutex.unlock();
+		mCondition.wait_for(unique_guard, duration, [this]() { return (!mRunning || mClear); });
+		mClear = false;
+	}
+}
+
 NetworkManager::NetworkManager(uint16_t port) noexcept :
 	CTcpServer{port},
-	mSqlServer{std::make_unique<SqlServer>()}
+	mSqlServer{new SqlServer},
+	mJunkCleaner{new JunkCleaner(CTcpServer::mClientSockets, CTcpServer::mClientSocketsMutex)}
 {
 	CTcpServer::mAllocSocketFunction = [this](SOCKET fd, std::unique_ptr<sockaddr_in> addr) -> std::unique_ptr<CSocket>
 		{ 
@@ -167,8 +249,15 @@ void NetworkManager::stop() noexcept
 			network_client->stop();
 		}
 	}
+	mJunkCleaner->stop();
+
 	CSocket::closeSocket();
 	IThread::join();
+}
+
+void NetworkManager::clearJunk()
+{
+	mJunkCleaner->clearJunk();
 }
 
 bool NetworkManager::connectSql(const std::string& admin_username, const std::string& admin_password)

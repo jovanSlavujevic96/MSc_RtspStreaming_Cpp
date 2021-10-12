@@ -23,6 +23,7 @@ public:
 
 	void start() noexcept(false);
 	void stop() noexcept;
+	void clearJunk();
 
 	bool connectSql(const std::string& admin_username, const std::string& admin_password);
 
@@ -47,4 +48,7 @@ private:
 
 	class SqlServer;
 	std::unique_ptr<SqlServer> mSqlServer;
+
+	class JunkCleaner;
+	std::unique_ptr<JunkCleaner> mJunkCleaner;
 };

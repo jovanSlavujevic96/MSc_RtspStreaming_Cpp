@@ -16,6 +16,7 @@ public:
 	void stop() noexcept;
 
 	bool gotAccess() const;
+	bool isAlive() const;
 	void sendMessage(const std::string& message) noexcept(false);
 
 private:
@@ -31,4 +32,5 @@ private:
 	std::unique_ptr<NetworkEncryptor> mEncryptor;
 	std::unique_ptr<NetworkDecryptor> mDecryptor;
 	bool mGotAccess;
+	bool mIsAlive;
 };

@@ -12,7 +12,7 @@
 #include "mainwindow.h"
 #include "streaming_worker.h"
 
-#define MAX_SIZE_PROCESSING_FRAME 100000u
+#define MAX_SIZE_PROCESSING_FRAME 150000u
 #define MAX_RETRIES 10u
 
 StreamingWorker::StreamingWorker() :
